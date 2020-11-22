@@ -104,16 +104,19 @@ contract CTokenStorage {
      * @notice Container for borrow balance information
      * @member principal Total balance (with accrued interest), after applying the most recent balance-changing action
      * @member interestIndex Global borrowIndex as of the most recent balance-changing action
+     * @member deadline Block number when loan needs to be repayed (0 if no deadline)
      */
     struct BorrowSnapshot {
         uint principal;
         uint interestIndex;
+        uint deadline;
     }
 
     /**
-     * @notice Mapping of account addresses to outstanding borrow balances
+     * @notice Mapping of account addresses to outstanding borrow balances, with separate loans keyed by an index
      */
-    mapping(address => BorrowSnapshot) internal accountBorrows;
+    mapping(address => mapping (uint => BorrowSnapshot)) internal accountBorrows;
+    mapping(address => uint[]) internal accountActiveLoanIndices;
 }
 
 contract CTokenInterface is CTokenStorage {
