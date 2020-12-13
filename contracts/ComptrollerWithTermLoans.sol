@@ -389,6 +389,7 @@ contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerWithTermLo
      * @param cToken Asset whose underlying is being borrowed
      * @param borrower The address borrowing the underlying
      * @param borrowAmount The amount of the underlying asset requested to borrow
+     * @param loanIndex Index of loan to verify
      */
     function borrowVerify(address cToken, address borrower, uint borrowAmount, uint loanIndex) external {
         // Shh - currently unused
@@ -409,6 +410,7 @@ contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerWithTermLo
      * @param payer The account which would repay the asset
      * @param borrower The account which would borrowed the asset
      * @param repayAmount The amount of the underlying asset the account would repay
+     * @param loanIndex Index of loan to check
      * @return 0 if the repay is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
     function repayBorrowAllowed(
@@ -441,6 +443,8 @@ contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerWithTermLo
      * @param payer The address repaying the borrow
      * @param borrower The address of the borrower
      * @param actualRepayAmount The amount of underlying being repaid
+     * @param borrowerIndex Index of borrower
+     * @param loanIndex Index of loan to verify
      */
     function repayBorrowVerify(
         address cToken,
@@ -543,6 +547,8 @@ contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerWithTermLo
      * @param liquidator The address repaying the borrow and seizing the collateral
      * @param borrower The address of the borrower
      * @param actualRepayAmount The amount of underlying being repaid
+     * @param seizeTokens The amount of tokens to seize
+     * @param loanIndex Index of loan to verify
      */
     function liquidateBorrowVerify(
         address cTokenBorrowed,

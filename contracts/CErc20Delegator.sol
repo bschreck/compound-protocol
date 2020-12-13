@@ -247,7 +247,6 @@ contract CErc20Delegator is CTokenInterface, CErc20Interface, CDelegatorInterfac
      * @notice Get an array of indices representing the current active loans opened by account
      * @dev This is used by comptroller to more efficiently perform liquidity checks.
      * @param account Address of the account to snapshot
-     * @param loanIndex index of loan
      * @return (array of loan indices)
      */
     function getLoanIndices(address account) external view returns (uint[] memory) {

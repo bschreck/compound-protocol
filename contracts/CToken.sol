@@ -267,7 +267,6 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @notice Get an array of indices representing the current active loans opened by account
      * @dev This is used by comptroller to more efficiently perform liquidity checks.
      * @param account Address of the account to snapshot
-     * @param loanIndex index of loan
      * @return (array of loan indices)
      */
     function getLoanIndices(address account) external view returns (uint[] memory) {
@@ -312,6 +311,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     /**
      * @notice Accrue interest to updated borrowIndex and then calculate account's borrow balance using the updated borrowIndex
      * @param account The address whose balance should be calculated after updating borrowIndex
+     * @param loanIndex Index of loan to get borrow balance of
      * @return The calculated balance
      */
     function borrowBalanceCurrent(address account, uint loanIndex) external nonReentrant returns (uint) {
@@ -333,6 +333,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     /**
      * @notice Return the borrow balance of account based on stored data
      * @param account The address whose balance should be calculated
+     * @param loanIndex Index of loan
      * @return The calculated balance
      */
     function borrowBalanceStored(address account, uint loanIndex) public view returns (uint) {
@@ -968,6 +969,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @param payer the account paying off the borrow
      * @param borrower the account with the debt being payed off
      * @param repayAmount the amount of undelrying tokens being returned
+     * @param loanIndex Index of loan
      * @return (uint, uint) An error code (0=success, otherwise a failure, see ErrorReporter.sol), and the actual repayment amount.
      */
     function repayBorrowFresh(address payer, address borrower, uint repayAmount, uint loanIndex) internal returns (uint, uint) {
