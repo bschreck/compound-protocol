@@ -20,7 +20,7 @@ contract CErc20Immutable is CErc20 {
      * @param admin_ Address of the administrator of this token
      */
     constructor(address underlying_,
-                ComptrollerInterface comptroller_,
+                ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa_,
                 string memory name_,

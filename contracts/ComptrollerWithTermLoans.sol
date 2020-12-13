@@ -4,16 +4,17 @@ import "./CToken.sol";
 import "./ErrorReporter.sol";
 import "./Exponential.sol";
 import "./PriceOracle.sol";
-import "./ComptrollerInterface.sol";
+import "./ComptrollerWithTermLoansInterface.sol";
 import "./ComptrollerStorage.sol";
 import "./Unitroller.sol";
 import "./Governance/Comp.sol";
+import "./CarefulMath.sol";
 
 /**
  * @title Compound's Comptroller Contract
  * @author Compound
  */
-contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerInterface, ComptrollerErrorReporter, Exponential {
+contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerWithTermLoansInterface, ComptrollerErrorReporter, CarefulMath, Exponential {
     /// @notice Emitted when an admin supports a market
     event MarketListed(CToken cToken);
 
@@ -337,9 +338,11 @@ contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerInterface,
      * @param cToken The market to verify the borrow against
      * @param borrower The account which would borrow the asset
      * @param borrowAmount The amount of underlying the account would borrow
+     * @param loanIndex The index of the borrower's loan
      * @return 0 if the borrow is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
-    function borrowAllowed(address cToken, address borrower, uint borrowAmount) external returns (uint) {
+    function borrowAllowed(address cToken, address borrower, uint borrowAmount, uint loanIndex) external returns (uint) {
+        // TODO: do we need loanIndex?
         // Pausing is a very serious situation - we revert to sound the alarms
         require(!borrowGuardianPaused[cToken], "borrow is paused");
 
@@ -387,11 +390,12 @@ contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerInterface,
      * @param borrower The address borrowing the underlying
      * @param borrowAmount The amount of the underlying asset requested to borrow
      */
-    function borrowVerify(address cToken, address borrower, uint borrowAmount) external {
+    function borrowVerify(address cToken, address borrower, uint borrowAmount, uint loanIndex) external {
         // Shh - currently unused
         cToken;
         borrower;
         borrowAmount;
+        loanIndex;
 
         // Shh - we don't ever want this hook to be marked pure
         if (false) {
@@ -411,11 +415,13 @@ contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerInterface,
         address cToken,
         address payer,
         address borrower,
-        uint repayAmount) external returns (uint) {
+        uint repayAmount,
+        uint loanIndex) external returns (uint) {
         // Shh - currently unused
         payer;
         borrower;
         repayAmount;
+        loanIndex;
 
         if (!markets[cToken].isListed) {
             return uint(Error.MARKET_NOT_LISTED);
@@ -441,13 +447,15 @@ contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerInterface,
         address payer,
         address borrower,
         uint actualRepayAmount,
-        uint borrowerIndex) external {
+        uint borrowerIndex,
+        uint loanIndex) external {
         // Shh - currently unused
         cToken;
         payer;
         borrower;
         actualRepayAmount;
         borrowerIndex;
+        loanIndex;
 
         // Shh - we don't ever want this hook to be marked pure
         if (false) {
@@ -478,11 +486,16 @@ contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerInterface,
             return uint(Error.MARKET_NOT_LISTED);
         }
 
-        (Error err, uint timeOverDeadline) = getTimeOverDeadline(borrower, cTokenBorrowed, loanIndex);
+        uint shortfall;
+        Error err;
+        uint timeOverDeadline = 0;
+        // TODO: timeOverDeadline
+        //(err, timeOverDeadline) = getTimeOverDeadline(borrower, cTokenBorrowed, loanIndex);
 
         if (timeOverDeadline == 0) {
             /* The borrower must have shortfall in order to be liquidatable */
-            (Error err, , uint shortfall) = getAccountLiquidityInternal(borrower, loanIndex);
+            // TODO: do we need loanIndex here?
+            (err, , shortfall) = getAccountLiquidityInternal(borrower);
             if (err != Error.NO_ERROR) {
                 return uint(err);
             }
@@ -505,20 +518,23 @@ contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerInterface,
         return uint(Error.NO_ERROR);
     }
 
-    function getMaxClose(uint borrowBalance, uint timeOverDeadline, uint shortfall) internal view returns (Error, uint) {
+    function getMaxClose(uint borrowBalance, uint timeOverDeadline, uint shortfall) internal view returns (MathError, uint) {
         // loan is not overdue or loan is underwater due to insufficient collateral
         if (timeOverDeadline == 0 || shortfall > 0) {
           return mulScalarTruncate(Exp({mantissa: closeFactorMantissa}), borrowBalance);
         } else {
           // TODO: safe math here
+          // TODO: timeFactorScale, maxTimeFactor
+          uint timeFactorScale = 1;
+          uint maxTimeFactor = 1;
           uint timeFactor = max(timeOverDeadline * timeFactorScale, maxTimeFactor);
-          (MathError mathError, uint closeFactorWithTimeMantissa) = mulScalarTruncate(Exp({mantissa: closeFactorMantissa}), timeFactor);
+          (MathError mathErr, uint closeFactorWithTimeMantissa) = mulScalarTruncate(Exp({mantissa: closeFactorMantissa}), timeFactor);
           if (mathErr != MathError.NO_ERROR) {
-              return (mathError, 0);
+              return (mathErr, 0);
           }
           return mulScalarTruncate(Exp({mantissa: closeFactorWithTimeMantissa}), borrowBalance);
-        };
-    };
+        }
+    }
 
     /**
      * @notice Validates liquidateBorrow and reverts on rejection. May emit logs.
@@ -534,7 +550,8 @@ contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerInterface,
         address liquidator,
         address borrower,
         uint actualRepayAmount,
-        uint seizeTokens) external {
+        uint seizeTokens,
+        uint loanIndex) external {
         // Shh - currently unused
         cTokenBorrowed;
         cTokenCollateral;
@@ -542,6 +559,7 @@ contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerInterface,
         borrower;
         actualRepayAmount;
         seizeTokens;
+        loanIndex;
 
         // Shh - we don't ever want this hook to be marked pure
         if (false) {

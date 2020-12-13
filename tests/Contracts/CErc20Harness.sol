@@ -14,7 +14,7 @@ contract CErc20Harness is CErc20Immutable {
     mapping (address => bool) public failTransferToAddresses;
 
     constructor(address underlying_,
-                ComptrollerInterface comptroller_,
+                ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa_,
                 string memory name_,
@@ -153,7 +153,7 @@ contract CErc20Harness is CErc20Immutable {
 
 contract CErc20Scenario is CErc20Immutable {
     constructor(address underlying_,
-                ComptrollerInterface comptroller_,
+                ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa_,
                 string memory name_,
@@ -186,7 +186,7 @@ contract CErc20Scenario is CErc20Immutable {
 
 contract CEvil is CErc20Scenario {
     constructor(address underlying_,
-                ComptrollerInterface comptroller_,
+                ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa_,
                 string memory name_,
@@ -210,7 +210,7 @@ contract CEvil is CErc20Scenario {
 
 contract CErc20DelegatorScenario is CErc20Delegator {
     constructor(address underlying_,
-                ComptrollerInterface comptroller_,
+                ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa_,
                 string memory name_,

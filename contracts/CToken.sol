@@ -1,6 +1,6 @@
 pragma solidity ^0.5.16;
 
-import "./ComptrollerInterface.sol";
+import "./ComptrollerWithTermLoansInterface.sol";
 import "./CTokenInterfaces.sol";
 import "./ErrorReporter.sol";
 import "./Exponential.sol";
@@ -23,7 +23,10 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @param symbol_ EIP-20 symbol of this token
      * @param decimals_ EIP-20 decimal precision of this token
      */
-    function initialize(ComptrollerInterface comptroller_,
+
+    uint256 MAX_INT = 2**256 - 1;
+
+    function initialize(ComptrollerWithTermLoansInterface comptroller_,
                         InterestRateModel interestRateModel_,
                         uint initialExchangeRateMantissa_,
                         string memory name_,
@@ -195,21 +198,24 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     }
 
     /**
-     * @notice Get a snapshot of the account's balances, and the cached exchange rate
+     * @notice Get a snapshot of the account's balances from a particular loan, and the cached exchange rate
      * @dev This is used by comptroller to more efficiently perform liquidity checks.
      * @param account Address of the account to snapshot
+     * @param loanIndex index of loan
      * @return (possible error, token balance, borrow balance, exchange rate mantissa)
      */
-    function getAccountSnapshot(address account) external view returns (uint, uint, uint, uint) {
+    function getAccountSnapshotByLoan(address account, uint loanIndex) external view returns (uint, uint, uint, uint) {
         uint cTokenBalance = accountTokens[account];
         uint borrowBalance;
         uint exchangeRateMantissa;
 
         MathError mErr;
 
-        (mErr, borrowBalance) = borrowBalanceStoredInternal(account);
+        uint[] memory activeLoanIndices = accountActiveLoanIndices[account];
+
+        (mErr, borrowBalance) = borrowBalanceStoredInternal(account, activeLoanIndices[loanIndex]);
         if (mErr != MathError.NO_ERROR) {
-            return (uint(Error.MATH_ERROR), 0, 0, 0);
+            return (uint(mErr), 0, 0, 0);
         }
 
         (mErr, exchangeRateMantissa) = exchangeRateStoredInternal();
@@ -219,6 +225,56 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
 
         return (uint(Error.NO_ERROR), cTokenBalance, borrowBalance, exchangeRateMantissa);
     }
+
+    /**
+     * @notice Get a snapshot of the account's balances (with balances from individual loans summed), and the cached exchange rate
+     * @dev This is used by comptroller to more efficiently perform liquidity checks.
+     * @param account Address of the account to snapshot
+     * @return (possible error, token balance, total borrow balance, exchange rate mantissa)
+     */
+    function getAccountSnapshot(address account) external view returns (uint, uint, uint, uint) {
+        uint cTokenBalance = accountTokens[account];
+        uint borrowBalance;
+        uint exchangeRateMantissa;
+
+        MathError mErr;
+
+        uint totalBorrowBalance = 0;
+        uint loanIndex;
+
+        uint[] memory activeLoanIndices = accountActiveLoanIndices[account];
+        for (uint i=0; i < activeLoanIndices.length; i++) {
+          loanIndex = activeLoanIndices[i];
+          (mErr, borrowBalance) = borrowBalanceStoredInternal(account, loanIndex);
+          if (mErr != MathError.NO_ERROR) {
+              return (uint(mErr), 0, 0, 0);
+          }
+          (mErr, totalBorrowBalance) = addUInt(totalBorrowBalance, borrowBalance);
+          if (mErr != MathError.NO_ERROR) {
+              return (uint(mErr), 0, 0, 0);
+          }
+        }
+
+        (mErr, exchangeRateMantissa) = exchangeRateStoredInternal();
+        if (mErr != MathError.NO_ERROR) {
+            return (uint(Error.MATH_ERROR), 0, 0, 0);
+        }
+
+        return (uint(Error.NO_ERROR), cTokenBalance, totalBorrowBalance, exchangeRateMantissa);
+    }
+
+    /**
+     * @notice Get an array of indices representing the current active loans opened by account
+     * @dev This is used by comptroller to more efficiently perform liquidity checks.
+     * @param account Address of the account to snapshot
+     * @param loanIndex index of loan
+     * @return (array of loan indices)
+     */
+    function getLoanIndices(address account) external view returns (uint[] memory) {
+      uint[] memory activeLoanIndices = accountActiveLoanIndices[account];
+      return activeLoanIndices;
+    }
+
 
     /**
      * @dev Function to simply retrieve block number
@@ -258,9 +314,20 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @param account The address whose balance should be calculated after updating borrowIndex
      * @return The calculated balance
      */
-    function borrowBalanceCurrent(address account) external nonReentrant returns (uint) {
+    function borrowBalanceCurrent(address account, uint loanIndex) external nonReentrant returns (uint) {
         require(accrueInterest() == uint(Error.NO_ERROR), "accrue interest failed");
-        return borrowBalanceStored(account);
+        return allBorrowBalanceStored(account);
+    }
+
+    /**
+     * @notice Accrue interest to updated borrowIndex and then calculate account's borrow balance using the updated borrowIndex
+     * @param loanIndex Index of loan
+     * @param account The address whose balance should be calculated after updating borrowIndex
+     * @return The calculated balance
+     */
+    function borrowBalanceCurrentByLoanIndex(address account, uint loanIndex) external nonReentrant returns (uint) {
+        require(accrueInterest() == uint(Error.NO_ERROR), "accrue interest failed");
+        return borrowBalanceStored(account, loanIndex);
     }
 
     /**
@@ -754,7 +821,8 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
             return fail(Error(error), FailureInfo.BORROW_ACCRUE_INTEREST_FAILED);
         }
         // borrowFresh emits borrow-specific logs on errors, so we don't need to
-        return borrowFresh(msg.sender, borrowAmount);
+        // TODO: deadline
+        return borrowFresh(msg.sender, borrowAmount, MAX_INT);
     }
 
     struct BorrowLocalVars {
@@ -781,13 +849,12 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
       }
       activeLoanIndices.push(newIndex);
       accountBorrows[borrower][newIndex] = BorrowSnapshot(0, 0, 0);
-      // borrowMore should initialize BorrowSnapshot
       return borrowMore(borrower, borrowAmount, newIndex, deadline);
     }
 
     function borrowMore(address payable borrower, uint borrowAmount, uint loanIndex, uint deadline) internal returns (uint) {
         /* Fail if borrow not allowed */
-        uint allowed = comptroller.borrowAllowed(address(this), borrower, borrowAmount, deadline);
+        uint allowed = comptroller.borrowAllowed(address(this), borrower, borrowAmount, loanIndex);
         if (allowed != 0) {
             return failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.BORROW_COMPTROLLER_REJECTION, allowed);
         }
@@ -834,7 +901,6 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
          *  On success, the cToken borrowAmount less of cash.
          *  doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
          */
-        // TODO: where is this defined? loanIndex/deadline?
         doTransferOut(borrower, borrowAmount);
 
         /* We write the previously calculated values into storage */
@@ -848,7 +914,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
 
         // TODO: all borrow amount or just this loan?
         /* We call the defense hook */
-        comptroller.borrowVerify(address(this), borrower, borrowAmount);
+        comptroller.borrowVerify(address(this), borrower, borrowAmount, loanIndex);
 
         return uint(Error.NO_ERROR);
     }
@@ -856,6 +922,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     /**
      * @notice Sender repays their own borrow
      * @param repayAmount The amount to repay
+     * @param loanIndex Index of loan to repay
      * @return (uint, uint) An error code (0=success, otherwise a failure, see ErrorReporter.sol), and the actual repayment amount.
      */
     function repayBorrowInternal(uint repayAmount, uint loanIndex) internal nonReentrant returns (uint, uint) {
@@ -872,6 +939,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @notice Sender repays a borrow belonging to borrower
      * @param borrower the account with the debt being payed off
      * @param repayAmount The amount to repay
+     * @param loanIndex Index of loan to repay
      * @return (uint, uint) An error code (0=success, otherwise a failure, see ErrorReporter.sol), and the actual repayment amount.
      */
     function repayBorrowBehalfInternal(address borrower, uint repayAmount, uint loanIndex) internal nonReentrant returns (uint, uint) {
@@ -967,7 +1035,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         emit RepayBorrow(payer, borrower, loanIndex, vars.actualRepayAmount, vars.accountBorrowsNew, vars.totalBorrowsNew);
 
         /* We call the defense hook */
-        comptroller.repayBorrowVerify(address(this), payer, borrower, loanIndex, vars.actualRepayAmount, vars.borrowerIndex);
+        comptroller.repayBorrowVerify(address(this), payer, borrower, vars.actualRepayAmount, vars.borrowerIndex, loanIndex);
 
         return (uint(Error.NO_ERROR), vars.actualRepayAmount);
     }
@@ -976,11 +1044,12 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @notice The sender liquidates the borrowers collateral.
      *  The collateral seized is transferred to the liquidator.
      * @param borrower The borrower of this cToken to be liquidated
-     * @param cTokenCollateral The market in which to seize collateral from the borrower
      * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param loanIndex Index of loan to liquidate
+     * @param cTokenCollateral The market in which to seize collateral from the borrower
      * @return (uint, uint) An error code (0=success, otherwise a failure, see ErrorReporter.sol), and the actual repayment amount.
      */
-    function liquidateBorrowInternal(address borrower, uint loanIndex, uint repayAmount, CTokenInterface cTokenCollateral) internal nonReentrant returns (uint, uint) {
+    function liquidateBorrowInternal(address borrower, uint repayAmount, uint loanIndex, CTokenInterface cTokenCollateral) internal nonReentrant returns (uint, uint) {
         uint error = accrueInterest();
         if (error != uint(Error.NO_ERROR)) {
             // accrueInterest emits logs on errors, but we still want to log the fact that an attempted liquidation failed
@@ -994,19 +1063,20 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         }
 
         // liquidateBorrowFresh emits borrow-specific logs on errors, so we don't need to
-        return liquidateBorrowFresh(msg.sender, borrower, loanIndex, repayAmount, cTokenCollateral);
+        return liquidateBorrowFresh(msg.sender, borrower, repayAmount, loanIndex, cTokenCollateral);
     }
 
     /**
      * @notice The liquidator liquidates the borrowers collateral.
      *  The collateral seized is transferred to the liquidator.
      * @param borrower The borrower of this cToken to be liquidated
+     * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param loanIndex Index of loan to liquidate
      * @param liquidator The address repaying the borrow and seizing collateral
      * @param cTokenCollateral The market in which to seize collateral from the borrower
-     * @param repayAmount The amount of the underlying borrowed asset to repay
      * @return (uint, uint) An error code (0=success, otherwise a failure, see ErrorReporter.sol), and the actual repayment amount.
      */
-    function liquidateBorrowFresh(address liquidator, address borrower, uint loanIndex, uint repayAmount, CTokenInterface cTokenCollateral) internal returns (uint, uint) {
+    function liquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, uint loanIndex, CTokenInterface cTokenCollateral) internal returns (uint, uint) {
         /* Fail if liquidate not allowed */
         uint allowed = comptroller.liquidateBorrowAllowed(address(this), address(cTokenCollateral), liquidator, borrower, repayAmount, loanIndex);
         if (allowed != 0) {
@@ -1050,7 +1120,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         // (No safe failures beyond this point)
 
         /* We calculate the number of collateral tokens that will be seized */
-        (uint amountSeizeError, uint seizeTokens) = comptroller.liquidateCalculateSeizeTokens(address(this), address(cTokenCollateral), actualRepayAmount, loanIndex);
+        (uint amountSeizeError, uint seizeTokens) = comptroller.liquidateCalculateSeizeTokens(address(this), address(cTokenCollateral), actualRepayAmount);
         require(amountSeizeError == uint(Error.NO_ERROR), "LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED");
 
         /* Revert if borrower collateral token balance < seizeTokens */
@@ -1071,7 +1141,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         emit LiquidateBorrow(liquidator, borrower, actualRepayAmount, loanIndex, address(cTokenCollateral), seizeTokens);
 
         /* We call the defense hook */
-        comptroller.liquidateBorrowVerify(address(this), address(cTokenCollateral), liquidator, borrower, actualRepayAmount, loanIndex, seizeTokens);
+        comptroller.liquidateBorrowVerify(address(this), address(cTokenCollateral), liquidator, borrower, actualRepayAmount, seizeTokens, loanIndex);
 
         return (uint(Error.NO_ERROR), actualRepayAmount);
     }
@@ -1099,7 +1169,6 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @param seizeTokens The number of cTokens to seize
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    // TODO: was here
     function seizeInternal(address seizerToken, address liquidator, address borrower, uint seizeTokens) internal returns (uint) {
         /* Fail if seize not allowed */
         uint allowed = comptroller.seizeAllowed(address(this), seizerToken, liquidator, borrower, seizeTokens);
@@ -1207,13 +1276,13 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
       * @dev Admin function to set a new comptroller
       * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
       */
-    function _setComptroller(ComptrollerInterface newComptroller) public returns (uint) {
+    function _setComptroller(ComptrollerWithTermLoansInterface newComptroller) public returns (uint) {
         // Check caller is admin
         if (msg.sender != admin) {
             return fail(Error.UNAUTHORIZED, FailureInfo.SET_COMPTROLLER_OWNER_CHECK);
         }
 
-        ComptrollerInterface oldComptroller = comptroller;
+        ComptrollerWithTermLoansInterface oldComptroller = comptroller;
         // Ensure invoke comptroller.isComptroller() returns true
         require(newComptroller.isComptroller(), "marker method returned false");
 

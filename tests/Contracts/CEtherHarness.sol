@@ -9,7 +9,7 @@ contract CEtherHarness is CEther {
 
     mapping (address => bool) public failTransferToAddresses;
 
-    constructor(ComptrollerInterface comptroller_,
+    constructor(ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa,
                 string memory name_,
@@ -163,7 +163,7 @@ contract CEtherScenario is CEther {
                 string memory symbol_,
                 uint8 decimals_,
                 address payable admin_,
-                ComptrollerInterface comptroller_,
+                ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa)
         CEther(comptroller_,

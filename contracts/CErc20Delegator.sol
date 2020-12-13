@@ -22,7 +22,7 @@ contract CErc20Delegator is CTokenInterface, CErc20Interface, CDelegatorInterfac
      * @param becomeImplementationData The encoded args for becomeImplementation
      */
     constructor(address underlying_,
-                ComptrollerInterface comptroller_,
+                ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa_,
                 string memory name_,
@@ -118,10 +118,11 @@ contract CErc20Delegator is CTokenInterface, CErc20Interface, CDelegatorInterfac
     /**
      * @notice Sender repays their own borrow
      * @param repayAmount The amount to repay
+     * @param loanIndex Index of loan to repay
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function repayBorrow(uint repayAmount) external returns (uint) {
-        bytes memory data = delegateToImplementation(abi.encodeWithSignature("repayBorrow(uint256)", repayAmount));
+    function repayBorrow(uint repayAmount, uint loanIndex) external returns (uint) {
+        bytes memory data = delegateToImplementation(abi.encodeWithSignature("repayBorrow(uint256,uint256)", repayAmount, loanIndex));
         return abi.decode(data, (uint));
     }
 
@@ -129,10 +130,11 @@ contract CErc20Delegator is CTokenInterface, CErc20Interface, CDelegatorInterfac
      * @notice Sender repays a borrow belonging to borrower
      * @param borrower the account with the debt being payed off
      * @param repayAmount The amount to repay
+     * @param loanIndex Index of loan to repay
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function repayBorrowBehalf(address borrower, uint repayAmount) external returns (uint) {
-        bytes memory data = delegateToImplementation(abi.encodeWithSignature("repayBorrowBehalf(address,uint256)", borrower, repayAmount));
+    function repayBorrowBehalf(address borrower, uint repayAmount, uint loanIndex) external returns (uint) {
+        bytes memory data = delegateToImplementation(abi.encodeWithSignature("repayBorrowBehalf(address,uint256,uint256)", borrower, repayAmount, loanIndex));
         return abi.decode(data, (uint));
     }
 
@@ -140,12 +142,13 @@ contract CErc20Delegator is CTokenInterface, CErc20Interface, CDelegatorInterfac
      * @notice The sender liquidates the borrowers collateral.
      *  The collateral seized is transferred to the liquidator.
      * @param borrower The borrower of this cToken to be liquidated
-     * @param cTokenCollateral The market in which to seize collateral from the borrower
      * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param loanIndex Index of loan to liquidate
+     * @param cTokenCollateral The market in which to seize collateral from the borrower
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function liquidateBorrow(address borrower, uint repayAmount, CTokenInterface cTokenCollateral) external returns (uint) {
-        bytes memory data = delegateToImplementation(abi.encodeWithSignature("liquidateBorrow(address,uint256,address)", borrower, repayAmount, cTokenCollateral));
+    function liquidateBorrow(address borrower, uint repayAmount, uint loanIndex, CTokenInterface cTokenCollateral) external returns (uint) {
+        bytes memory data = delegateToImplementation(abi.encodeWithSignature("liquidateBorrow(address,uint256,uint256,address)", borrower, repayAmount, loanIndex, cTokenCollateral));
         return abi.decode(data, (uint));
     }
 
@@ -229,6 +232,30 @@ contract CErc20Delegator is CTokenInterface, CErc20Interface, CDelegatorInterfac
     }
 
     /**
+     * @notice Get a snapshot of the account's balances, and the cached exchange rate
+     * @dev This is used by comptroller to more efficiently perform liquidity checks.
+     * @param account Address of the account to snapshot
+     * @param loanIndex index of loan
+     * @return (possible error, token balance, borrow balance, exchange rate mantissa)
+     */
+    function getAccountSnapshotByLoan(address account, uint loanIndex) external view returns (uint, uint, uint, uint) {
+        bytes memory data = delegateToViewImplementation(abi.encodeWithSignature("getAccountSnapshot(address,uint256)", account, loanIndex));
+        return abi.decode(data, (uint, uint, uint, uint));
+    }
+
+    /**
+     * @notice Get an array of indices representing the current active loans opened by account
+     * @dev This is used by comptroller to more efficiently perform liquidity checks.
+     * @param account Address of the account to snapshot
+     * @param loanIndex index of loan
+     * @return (array of loan indices)
+     */
+    function getLoanIndices(address account) external view returns (uint[] memory) {
+        bytes memory data = delegateToViewImplementation(abi.encodeWithSignature("getLoanIndices(address)", account));
+        return abi.decode(data, (uint[]));
+    }
+
+    /**
      * @notice Returns the current per-block borrow interest rate for this cToken
      * @return The borrow interest rate per block, scaled by 1e18
      */
@@ -258,7 +285,7 @@ contract CErc20Delegator is CTokenInterface, CErc20Interface, CDelegatorInterfac
     /**
      * @notice Accrue interest to updated borrowIndex and then calculate account's borrow balance using the updated borrowIndex
      * @param account The address whose balance should be calculated after updating borrowIndex
-     * @return The calculated balance
+     * @return The calculated balance (of all loans for account, summed)
      */
     function borrowBalanceCurrent(address account) external returns (uint) {
         bytes memory data = delegateToImplementation(abi.encodeWithSignature("borrowBalanceCurrent(address)", account));
@@ -268,10 +295,21 @@ contract CErc20Delegator is CTokenInterface, CErc20Interface, CDelegatorInterfac
     /**
      * @notice Return the borrow balance of account based on stored data
      * @param account The address whose balance should be calculated
+     * @param loanIndex Index of loan
      * @return The calculated balance
      */
-    function borrowBalanceStored(address account) public view returns (uint) {
-        bytes memory data = delegateToViewImplementation(abi.encodeWithSignature("borrowBalanceStored(address)", account));
+    function borrowBalanceStored(address account, uint loanIndex) public view returns (uint) {
+        bytes memory data = delegateToViewImplementation(abi.encodeWithSignature("borrowBalanceStored(address,uint256)", account, loanIndex));
+        return abi.decode(data, (uint));
+    }
+
+    /**
+     * @notice Return the borrow balance of account based on stored data
+     * @param account The address whose balance should be calculated
+     * @return The calculated balance
+     */
+    function allBorrowBalanceStored(address account) public view returns (uint) {
+        bytes memory data = delegateToViewImplementation(abi.encodeWithSignature("allBorrowBalanceStored(address)", account));
         return abi.decode(data, (uint));
     }
 
@@ -345,7 +383,7 @@ contract CErc20Delegator is CTokenInterface, CErc20Interface, CDelegatorInterfac
       * @dev Admin function to set a new comptroller
       * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
       */
-    function _setComptroller(ComptrollerInterface newComptroller) public returns (uint) {
+    function _setComptroller(ComptrollerWithTermLoansInterface newComptroller) public returns (uint) {
         bytes memory data = delegateToImplementation(abi.encodeWithSignature("_setComptroller(address)", newComptroller));
         return abi.decode(data, (uint));
     }

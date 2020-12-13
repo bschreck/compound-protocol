@@ -18,7 +18,7 @@ contract CEther is CToken {
      * @param decimals_ ERC-20 decimal precision of this token
      * @param admin_ Address of the administrator of this token
      */
-    constructor(ComptrollerInterface comptroller_,
+    constructor(ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa_,
                 string memory name_,
@@ -78,9 +78,10 @@ contract CEther is CToken {
     /**
      * @notice Sender repays their own borrow
      * @dev Reverts upon any failure
+     * @param loanIndex Index of loan to repay
      */
-    function repayBorrow() external payable {
-        (uint err,) = repayBorrowInternal(msg.value);
+    function repayBorrow(uint loanIndex) external payable {
+        (uint err,) = repayBorrowInternal(msg.value, loanIndex);
         requireNoError(err, "repayBorrow failed");
     }
 
@@ -88,9 +89,10 @@ contract CEther is CToken {
      * @notice Sender repays a borrow belonging to borrower
      * @dev Reverts upon any failure
      * @param borrower the account with the debt being payed off
+     * @param loanIndex Index of loan to repay
      */
-    function repayBorrowBehalf(address borrower) external payable {
-        (uint err,) = repayBorrowBehalfInternal(borrower, msg.value);
+    function repayBorrowBehalf(address borrower, uint loanIndex) external payable {
+        (uint err,) = repayBorrowBehalfInternal(borrower, msg.value, loanIndex);
         requireNoError(err, "repayBorrowBehalf failed");
     }
 
@@ -99,10 +101,11 @@ contract CEther is CToken {
      *  The collateral seized is transferred to the liquidator.
      * @dev Reverts upon any failure
      * @param borrower The borrower of this cToken to be liquidated
+     * @param loanIndex Index of loan to liquidate
      * @param cTokenCollateral The market in which to seize collateral from the borrower
      */
-    function liquidateBorrow(address borrower, CToken cTokenCollateral) external payable {
-        (uint err,) = liquidateBorrowInternal(borrower, msg.value, cTokenCollateral);
+    function liquidateBorrow(address borrower, uint loanIndex, CToken cTokenCollateral) external payable {
+        (uint err,) = liquidateBorrowInternal(borrower, msg.value, loanIndex, cTokenCollateral);
         requireNoError(err, "liquidateBorrow failed");
     }
 
