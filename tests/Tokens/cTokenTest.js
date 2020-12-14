@@ -101,10 +101,12 @@ describe('CToken', function () {
   describe("borrowBalanceCurrent", () => {
     let borrower;
     let cToken;
+    let loanIndex;
 
     beforeEach(async () => {
       borrower = accounts[0];
       cToken = await makeCToken();
+      loanIndex = 0;
     });
 
     beforeEach(async () => {
@@ -116,44 +118,46 @@ describe('CToken', function () {
       await send(cToken.interestRateModel, 'setFailBorrowRate', [true]);
       // make sure we accrue interest
       await send(cToken, 'harnessFastForward', [1]);
-      await expect(send(cToken, 'borrowBalanceCurrent', [borrower])).rejects.toRevert("revert INTEREST_RATE_MODEL_ERROR");
+      await expect(send(cToken, 'borrowBalanceCurrent', [borrower, loanIndex])).rejects.toRevert("revert INTEREST_RATE_MODEL_ERROR");
     });
 
     it("returns successful result from borrowBalanceStored with no interest", async () => {
       await setBorrowRate(cToken, 0);
       await pretendBorrow(cToken, borrower, 1, 1, 5e18);
-      expect(await call(cToken, 'borrowBalanceCurrent', [borrower])).toEqualNumber(5e18)
+      expect(await call(cToken, 'borrowBalanceCurrent', [borrower, loanIndex])).toEqualNumber(5e18)
     });
 
     it("returns successful result from borrowBalanceCurrent with no interest", async () => {
       await setBorrowRate(cToken, 0);
       await pretendBorrow(cToken, borrower, 1, 3, 5e18);
       expect(await send(cToken, 'harnessFastForward', [5])).toSucceed();
-      expect(await call(cToken, 'borrowBalanceCurrent', [borrower])).toEqualNumber(5e18 * 3)
+      expect(await call(cToken, 'borrowBalanceCurrent', [borrower, loanIndex])).toEqualNumber(5e18 * 3)
     });
   });
 
   describe("borrowBalanceStored", () => {
     let borrower;
     let cToken;
+    let loanIndex;
 
     beforeEach(async () => {
       borrower = accounts[0];
       cToken = await makeCToken({ comptrollerOpts: { kind: 'bool' } });
+      loanIndex = 0;
     });
 
     it("returns 0 for account with no borrows", async () => {
-      expect(await call(cToken, 'borrowBalanceStored', [borrower])).toEqualNumber(0)
+      expect(await call(cToken, 'borrowBalanceStored', [borrower, loanIndex])).toEqualNumber(0)
     });
 
     it("returns stored principal when account and market indexes are the same", async () => {
       await pretendBorrow(cToken, borrower, 1, 1, 5e18);
-      expect(await call(cToken, 'borrowBalanceStored', [borrower])).toEqualNumber(5e18);
+      expect(await call(cToken, 'borrowBalanceStored', [borrower, loanIndex])).toEqualNumber(5e18);
     });
 
     it("returns calculated balance when market index is higher than account index", async () => {
       await pretendBorrow(cToken, borrower, 1, 3, 5e18);
-      expect(await call(cToken, 'borrowBalanceStored', [borrower])).toEqualNumber(5e18 * 3);
+      expect(await call(cToken, 'borrowBalanceStored', [borrower, loanIndex])).toEqualNumber(5e18 * 3);
     });
 
     it("has undefined behavior when market index is lower than account index", async () => {
@@ -162,12 +166,12 @@ describe('CToken', function () {
 
     it("reverts on overflow of principal", async () => {
       await pretendBorrow(cToken, borrower, 1, 3, UInt256Max());
-      await expect(call(cToken, 'borrowBalanceStored', [borrower])).rejects.toRevert("revert borrowBalanceStored: borrowBalanceStoredInternal failed");
+      await expect(call(cToken, 'borrowBalanceStored', [borrower, loanIndex])).rejects.toRevert("revert borrowBalanceStored: borrowBalanceStoredInternal failed");
     });
 
     it("reverts on non-zero stored principal with zero account index", async () => {
       await pretendBorrow(cToken, borrower, 0, 3, 5);
-      await expect(call(cToken, 'borrowBalanceStored', [borrower])).rejects.toRevert("revert borrowBalanceStored: borrowBalanceStoredInternal failed");
+      await expect(call(cToken, 'borrowBalanceStored', [borrower, loanIndex])).rejects.toRevert("revert borrowBalanceStored: borrowBalanceStoredInternal failed");
     });
   });
 

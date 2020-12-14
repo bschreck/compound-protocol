@@ -192,7 +192,10 @@ async function makeCToken(opts = {}) {
           "0x0"
         ]
       );
+      console.log('CDELEGATEE', cDelegatee);
+      console.log('CDELEGATOR', cDelegator);
       cToken = await saddle.getContractAt('CErc20DelegateHarness', cDelegator._address);
+      console.log('CTOKEN', cToken);
       break;
   }
 
@@ -282,9 +285,9 @@ async function totalSupply(token) {
   return etherUnsigned(await call(token, 'totalSupply'));
 }
 
-async function borrowSnapshot(cToken, account) {
-  const { principal, interestIndex } = await call(cToken, 'harnessAccountBorrows', [account]);
-  return { principal: etherUnsigned(principal), interestIndex: etherUnsigned(interestIndex) };
+async function borrowSnapshot(cToken, account, loanIndex) {
+  const { principal, interestIndex, deadline } = await call(cToken, 'harnessAccountBorrows', [account, loanIndex]);
+  return { principal: etherUnsigned(principal), interestIndex: etherUnsigned(interestIndex) , deadline: deadline};
 }
 
 async function totalBorrows(cToken) {
@@ -421,7 +424,7 @@ async function getSupplyRate(interestRateModel, cash, borrows, reserves, reserve
 
 async function pretendBorrow(cToken, borrower, accountIndex, marketIndex, principalRaw, blockNumber = 2e7) {
   await send(cToken, 'harnessSetTotalBorrows', [etherUnsigned(principalRaw)]);
-  await send(cToken, 'harnessSetAccountBorrows', [borrower, etherUnsigned(principalRaw), etherMantissa(accountIndex)]);
+  await send(cToken, 'harnessSetAccountBorrows', [borrower, 0, etherUnsigned(principalRaw), etherMantissa(accountIndex)]);
   await send(cToken, 'harnessSetBorrowIndex', [etherMantissa(marketIndex)]);
   await send(cToken, 'harnessSetAccrualBlockNumber', [etherUnsigned(blockNumber)]);
   await send(cToken, 'harnessSetBlockNumber', [etherUnsigned(blockNumber)]);

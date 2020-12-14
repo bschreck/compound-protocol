@@ -13,6 +13,7 @@ import "./InterestRateModel.sol";
  * @notice Abstract base for CTokens
  * @author Compound
  */
+ // TODO: max number of loans per account
 contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     /**
      * @notice Initialize the money market
