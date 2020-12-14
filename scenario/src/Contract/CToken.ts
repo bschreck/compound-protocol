@@ -5,8 +5,8 @@ import { encodedNumber } from '../Encoding';
 export interface CTokenMethods {
   _resignImplementation(): Sendable<void>;
   balanceOfUnderlying(address: string): Callable<number>;
-  borrowBalanceCurrent(address: string): Callable<string>;
-  borrowBalanceStored(address: string): Callable<string>;
+  borrowBalanceCurrent(address: string, loanIndex: number): Callable<string>;
+  borrowBalanceStored(address: string, loanIndex: number): Callable<string>;
   totalBorrows(): Callable<string>;
   totalBorrowsCurrent(): Callable<number>;
   totalReserves(): Callable<string>;
@@ -21,12 +21,12 @@ export interface CTokenMethods {
   redeem(amount: encodedNumber): Sendable<number>;
   redeemUnderlying(amount: encodedNumber): Sendable<number>;
   borrow(amount: encodedNumber): Sendable<number>;
-  repayBorrow(): Sendable<number>;
-  repayBorrow(amount: encodedNumber): Sendable<number>;
-  repayBorrowBehalf(amount: string): Sendable<number>;
-  repayBorrowBehalf(address: string, amount: encodedNumber): Sendable<number>;
-  liquidateBorrow(borrower: string, cTokenCollateral: string): Sendable<number>;
-  liquidateBorrow(borrower: string, repayAmount: encodedNumber, cTokenCollateral: string): Sendable<number>;
+  repayBorrow(loanIndex: number): Sendable<number>;
+  repayBorrow(amount: encodedNumber, loanIndex: number): Sendable<number>;
+  repayBorrowBehalf(amount: string, loanIndex: number): Sendable<number>;
+  repayBorrowBehalf(address: string, amount: encodedNumber, loanIndex: number): Sendable<number>;
+  liquidateBorrow(borrower: string, loanIndex: number, cTokenCollateral: string): Sendable<number>;
+  liquidateBorrow(borrower: string, repayAmount: encodedNumber, loanIndex: number, cTokenCollateral: string): Sendable<number>;
   seize(liquidator: string, borrower: string, seizeTokens: encodedNumber): Sendable<number>;
   evilSeize(
     treasure: string,

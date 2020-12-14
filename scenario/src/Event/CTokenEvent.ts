@@ -121,13 +121,14 @@ async function borrow(world: World, from: string, cToken: CToken, amount: Number
 async function repayBorrow(world: World, from: string, cToken: CToken, amount: NumberV | NothingV): Promise<World> {
   let invokation;
   let showAmount;
+  let loanIndex = 0;
 
   if (amount instanceof NumberV) {
     showAmount = amount.show();
-    invokation = await invoke(world, cToken.methods.repayBorrow(amount.encode()), from, CTokenErrorReporter);
+    invokation = await invoke(world, cToken.methods.repayBorrow(amount.encode(), loanIndex), from, CTokenErrorReporter);
   } else {
     showAmount = showTrxValue(world);
-    invokation = await invoke(world, cToken.methods.repayBorrow(), from, CTokenErrorReporter);
+    invokation = await invoke(world, cToken.methods.repayBorrow(loanIndex), from, CTokenErrorReporter);
   }
 
   world = addAction(
@@ -142,13 +143,14 @@ async function repayBorrow(world: World, from: string, cToken: CToken, amount: N
 async function repayBorrowBehalf(world: World, from: string, behalf: string, cToken: CToken, amount: NumberV | NothingV): Promise<World> {
   let invokation;
   let showAmount;
+  let loanIndex = 0;
 
   if (amount instanceof NumberV) {
     showAmount = amount.show();
-    invokation = await invoke(world, cToken.methods.repayBorrowBehalf(behalf, amount.encode()), from, CTokenErrorReporter);
+    invokation = await invoke(world, cToken.methods.repayBorrowBehalf(behalf, amount.encode(), loanIndex), from, CTokenErrorReporter);
   } else {
     showAmount = showTrxValue(world);
-    invokation = await invoke(world, cToken.methods.repayBorrowBehalf(behalf), from, CTokenErrorReporter);
+    invokation = await invoke(world, cToken.methods.repayBorrowBehalf(behalf, loanIndex), from, CTokenErrorReporter);
   }
 
   world = addAction(
@@ -163,13 +165,14 @@ async function repayBorrowBehalf(world: World, from: string, behalf: string, cTo
 async function liquidateBorrow(world: World, from: string, cToken: CToken, borrower: string, collateral: CToken, repayAmount: NumberV | NothingV): Promise<World> {
   let invokation;
   let showAmount;
+  let loanIndex = 0;
 
   if (repayAmount instanceof NumberV) {
     showAmount = repayAmount.show();
-    invokation = await invoke(world, cToken.methods.liquidateBorrow(borrower, repayAmount.encode(), collateral._address), from, CTokenErrorReporter);
+    invokation = await invoke(world, cToken.methods.liquidateBorrow(borrower, repayAmount.encode(), loanIndex, collateral._address), from, CTokenErrorReporter);
   } else {
     showAmount = showTrxValue(world);
-    invokation = await invoke(world, cToken.methods.liquidateBorrow(borrower, collateral._address), from, CTokenErrorReporter);
+    invokation = await invoke(world, cToken.methods.liquidateBorrow(borrower, loanIndex, collateral._address), from, CTokenErrorReporter);
   }
 
   world = addAction(

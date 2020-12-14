@@ -33,12 +33,12 @@ Test "When account goes further underwater than the liquidation incentive and ca
     --
     -- Pay back a bunch of debt by liquidating
     Prep Jared 10e18 BAT cBAT
-    Liquidate Jared "->" Geoff 0.9e18 cBAT "Seizing" cZRX
+    Liquidate Jared "->" Geoff 0.9e18 0 cBAT "Seizing" cZRX
     Assert Equal (CToken cBAT BorrowBalance Geoff) 0.1e18
     Assert Equal (CToken cZRX UnderlyingBalance Geoff) 0.127368422e18
     -- Do it again, and note that the collateral is gone but borrows remain
     --  if we had set the close factor lower, it would just take more steps
-    Liquidate Jared "->" Geoff 0.0880000008e18 cBAT "Seizing" cZRX
+    Liquidate Jared "->" Geoff 0.0880000008e18 0 cBAT "Seizing" cZRX
     Assert Equal (CToken cBAT BorrowBalance Geoff) 0.0119999992e18
     Assert Equal (CToken cZRX UnderlyingBalance Geoff) 0
 
@@ -49,7 +49,7 @@ Test "When liquidation incentive is too high to be effective"
     NewBorrow borrowAmount:1e18 mintAmount:1.43e18 liquidationIncentive:1.5
     --
     -- Verify that the borrow results in the correct state
-    Assert Equal (CToken cBAT BorrowBalance Geoff) 1e18
+    Assert Equal (CToken cBAT BorrowBalance Geoff 0) 1e18
     Assert Equal (CToken cZRX UnderlyingBalance Geoff) 1.43e18
     --
     -- Put the account underwater s.t. 0.7 < Borrow/Supply
@@ -67,11 +67,11 @@ Test "When liquidation incentive is too high to be effective"
     --  now Supply/Borrow = 0.567931036 * 0.87 / 0.5 = 1.135862072
     --
     -- Now perform the liquidation
-    Liquidate Jared "->" Geoff 0.5e18 cBAT "Seizing" cZRX
+    Liquidate Jared "->" Geoff 0.5e18 0 cBAT "Seizing" cZRX
     --
     -- Verify that the liquidation went through
-    Assert Equal (CToken cBAT BorrowBalance Geoff) 0.5e18
-    Assert Equal (CToken cZRX UnderlyingBalance Geoff) 0.567931036e18
+    Assert Equal (CToken cBAT BorrowBalance Geoff 0) 0.5e18
+    Assert Equal (CToken cZRX UnderlyingBalance Geoff 0) 0.567931036e18
     --
     -- Test succeeded which means our expectation was correct
     --  liquidity went down after a liquidation!
@@ -79,4 +79,4 @@ Test "When liquidation incentive is too high to be effective"
     -- Now lets see that lowering the incentive and liquidating improves the situation
     Comptroller LiquidationIncentive 1.2
     Expect Changes (Comptroller Liquidity Geoff) 0.016000000294e18
-    Liquidate Jared "->" Geoff 0.1e18 cBAT "Seizing" cZRX
+    Liquidate Jared "->" Geoff 0.1e18 0 cBAT "Seizing" cZRX

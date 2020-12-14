@@ -7,6 +7,7 @@ import {
   getAddressV,
   getCoreValue,
   getStringV,
+  getNumberV,
   mapValue
 } from '../CoreValue';
 import { Arg, Fetcher, getFetcherValue } from '../Command';
@@ -62,12 +63,12 @@ async function balanceOfUnderlying(world: World, cToken: CToken, user: string): 
   return new NumberV(await cToken.methods.balanceOfUnderlying(user).call());
 }
 
-async function getBorrowBalance(world: World, cToken: CToken, user): Promise<NumberV> {
-  return new NumberV(await cToken.methods.borrowBalanceCurrent(user).call());
+async function getBorrowBalance(world: World, cToken: CToken, user, loanIndex: number): Promise<NumberV> {
+  return new NumberV(await cToken.methods.borrowBalanceCurrent(user, loanIndex).call());
 }
 
-async function getBorrowBalanceStored(world: World, cToken: CToken, user): Promise<NumberV> {
-  return new NumberV(await cToken.methods.borrowBalanceStored(user).call());
+async function getBorrowBalanceStored(world: World, cToken: CToken, user, loanIndex: number): Promise<NumberV> {
+  return new NumberV(await cToken.methods.borrowBalanceStored(user, loanIndex).call());
 }
 
 async function getTotalBorrows(world: World, cToken: CToken): Promise<NumberV> {
@@ -197,7 +198,7 @@ export function cTokenFetchers() {
       { namePos: 1 }
     ),
 
-    new Fetcher<{ cToken: CToken, address: AddressV }, NumberV>(`
+    new Fetcher<{ cToken: CToken, address: AddressV, loanIndex: NumberV }, NumberV>(`
         #### BorrowBalance
 
         * "CToken <CToken> BorrowBalance <User>" - Returns a user's borrow balance (including interest)
@@ -206,13 +207,14 @@ export function cTokenFetchers() {
       "BorrowBalance",
       [
         new Arg("cToken", getCTokenV),
-        new Arg("address", getAddressV)
+        new Arg("address", getAddressV),
+        new Arg("loanIndex", getNumberV)
       ],
-      (world, { cToken, address }) => getBorrowBalance(world, cToken, address.val),
+      (world, { cToken, address, loanIndex }) => getBorrowBalance(world, cToken, address.val, Number(loanIndex.val)),
       { namePos: 1 }
     ),
 
-    new Fetcher<{ cToken: CToken, address: AddressV }, NumberV>(`
+    new Fetcher<{ cToken: CToken, address: AddressV, loanIndex: NumberV }, NumberV>(`
         #### BorrowBalanceStored
 
         * "CToken <CToken> BorrowBalanceStored <User>" - Returns a user's borrow balance (without specifically re-accruing interest)
@@ -221,9 +223,10 @@ export function cTokenFetchers() {
       "BorrowBalanceStored",
       [
         new Arg("cToken", getCTokenV),
-        new Arg("address", getAddressV)
+        new Arg("address", getAddressV),
+        new Arg("loanIndex", getNumberV)
       ],
-      (world, { cToken, address }) => getBorrowBalanceStored(world, cToken, address.val),
+      (world, { cToken, address, loanIndex }) => getBorrowBalanceStored(world, cToken, address.val, Number(loanIndex.val)),
       { namePos: 1 }
     ),
 

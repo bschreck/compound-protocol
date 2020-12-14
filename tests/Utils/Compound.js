@@ -11,6 +11,7 @@ const {
 const BigNumber = require('bignumber.js');
 
 async function makeComptroller(opts = {}) {
+  console.log("makeComptroller opts=", opts);
   const {
     root = saddle.account,
     kind = 'unitroller'
@@ -103,12 +104,14 @@ async function makeComptroller(opts = {}) {
 }
 
 async function makeCToken(opts = {}) {
+  console.log("makeCToken");
   const {
     root = saddle.account,
     kind = 'cerc20'
   } = opts || {};
 
   const comptroller = opts.comptroller || await makeComptroller(opts.comptrollerOpts);
+  console.log("comptroller", comptroller);
   const interestRateModel = opts.interestRateModel || await makeInterestRateModel(opts.interestRateModelOpts);
   const exchangeRate = etherMantissa(dfn(opts.exchangeRate, 1));
   const decimals = etherUnsigned(dfn(opts.decimals, 8));

@@ -71,7 +71,6 @@ async function repayBorrowBehalf(cToken, payer, borrower, repayAmount, loanIndex
 
 describe('CToken', function () {
   let cToken, root, borrower, benefactor, accounts;
-  debugger;
   beforeEach(async () => {
     [root, borrower, benefactor, ...accounts] = saddle.accounts;
     cToken = await makeCToken({comptrollerOpts: {kind: 'bool'}});

@@ -18,6 +18,10 @@ Macro PricedComptroller closeFactor=0.1 maxAssets=20
     ComptrollerImpl ScenComptroller Become
 
 Macro NewComptroller price=1.0 closeFactor=0.1 maxAssets=20
+    --term
+    ComptrollerImpl Deploy Scenario ScenComptrollerWithTermLoans
+    Unitroller SetPendingImpl ScenComptrollerWithTermLoans
+    ComptrollerImpl ScenComptrollerWithTermLoans Become
     --g1
     Unitroller Deploy
     PriceOracle Deploy Fixed price
@@ -125,29 +129,29 @@ Macro BorrowEth user amount token
 Macro Borrow user amount token
     From user (CToken token Borrow amount)
 
-Macro RepayBorrow user amount token
-    From user (CToken token RepayBorrow amount)
+Macro RepayBorrow user amount loanIndex token
+    From user (CToken token RepayBorrow amount loanIndex)
 
-Macro RepayBorrowEth user amount token
-    From user (Trx GasPrice 0 (Trx Value amount (CToken token RepayBorrow)))
+Macro RepayBorrowEth user amount loanIndex token
+    From user (Trx GasPrice 0 (Trx Value amount loanIndex (CToken token RepayBorrow)))
 
-Macro RepayBorrowEthMax user amount token
-    From user (Trx GasPrice 0 (Trx Value amount (Maximillion RepayBehalf user)))
+Macro RepayBorrowEthMax user amount loanIndex token
+    From user (Trx GasPrice 0 (Trx Value amount loanIndex (Maximillion RepayBehalf user)))
 
-Macro RepayBorrowBehalf user behalf amount token
-    From user (CToken token RepayBorrowBehalf behalf amount)
+Macro RepayBorrowBehalf user behalf amount loanIndex token
+    From user (CToken token RepayBorrowBehalf behalf amount loanIndex)
 
-Macro RepayBorrowEthBehalf user behalf amount token
-    From user (Trx GasPrice 0 (Trx Value amount (CToken token RepayBorrowBehalf behalf)))
+Macro RepayBorrowEthBehalf user behalf amount loanIndex token
+    From user (Trx GasPrice 0 (Trx Value amount loanIndex (CToken token RepayBorrowBehalf behalf)))
 
-Macro Liquidate liquidator _ borrower amount token _ collateral
-    From liquidator (CToken token Liquidate borrower collateral amount)
+Macro Liquidate liquidator _ borrower amount loanIndex token _ collateral
+    From liquidator (CToken token Liquidate borrower collateral amount loanIndex)
 
-Macro LiquidateEthColl liquidator _ borrower amount token _ collateral
-    From liquidator (Trx GasPrice 0 (CToken token Liquidate borrower collateral amount))
+Macro LiquidateEthColl liquidator _ borrower amount loanIndex token _ collateral
+    From liquidator (Trx GasPrice 0 (CToken token Liquidate borrower collateral amount loanIndex))
 
-Macro LiquidateEthBorrow liquidator _ borrower amount token _ collateral
-    From liquidator (Trx GasPrice 0 (Trx Value amount (CToken token Liquidate borrower collateral)))
+Macro LiquidateEthBorrow liquidator _ borrower amount loanIndex token _ collateral
+    From liquidator (Trx GasPrice 0 (Trx Value amount loanIndex (CToken token Liquidate borrower collateral)))
 
 Macro Seize amount token caller liquidator borrower
     From caller (CToken token Seize liquidator borrower amount)
@@ -213,10 +217,10 @@ Macro BorrowAndRepayWithInterest erc20 cToken amount interestAmount interestRate
     FastForward blocks Blocks
     -- RepayBorrow Torrey (CToken BorrowBalance Torrey) cToken
     From Torrey (Erc20 erc20 Approve cToken amount)
-    RepayBorrow Torrey amount cToken
+    RepayBorrow Torrey amount 0 cToken
     From Torrey (Erc20 erc20 Approve cToken interestAmount)
     Give Torrey interestAmount erc20
-    RepayBorrow Torrey interestAmount cToken
+    RepayBorrow Torrey interestAmount 0 cToken
     Assert Equal (CToken cToken BorrowBalance Torrey) Zero
 
 -- Macro for performing a borrow with the sole
@@ -238,6 +242,6 @@ Macro BorrowAndRepayEthWithInterest cEther amount interestAmount interestRate bl
     -- Cool, we've borrowed, now let's accrue interest then repay all
     FastForward blocks Blocks
     -- RepayBorrow Torrey (CToken BorrowBalance Torrey) cEther
-    RepayBorrowEth Torrey amount cEther
-    RepayBorrowEth Torrey interestAmount cEther
+    RepayBorrowEth Torrey amount 0 cEther
+    RepayBorrowEth Torrey interestAmount 0 cEther
     Assert Equal (CToken cEther BorrowBalance Torrey) Zero
