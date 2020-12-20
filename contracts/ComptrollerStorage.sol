@@ -1,7 +1,9 @@
 pragma solidity ^0.5.16;
 
 import "./CToken.sol";
+import "./CTokenWithTermLoans.sol";
 import "./PriceOracle.sol";
+import "./PriceOracleWithTermLoans.sol";
 
 contract UnitrollerAdminStorage {
     /**
@@ -134,4 +136,18 @@ contract ComptrollerV4Storage is ComptrollerV3Storage {
 
     // @notice Borrow caps enforced by borrowAllowed for each cToken address. Defaults to zero which corresponds to unlimited borrowing.
     mapping(address => uint) public borrowCaps;
+}
+
+contract ComptrollerV5Storage is ComptrollerV4Storage {
+    /**
+     * @notice Oracle which gives the price of any given asset
+     */
+    PriceOracleWithTermLoans public oracle;
+
+    /// @notice A list of all markets
+    CTokenWithTermLoans[] public allMarkets;
+    /**
+     * @notice Per-account mapping of "assets you are in", capped by maxAssets
+     */
+    mapping(address => CTokenWithTermLoans[]) public accountAssets;
 }

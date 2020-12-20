@@ -82,4 +82,9 @@ contract CarefulMath {
 
         return subUInt(sum, c);
     }
+
+    // TODO: I put this here but look at openzeppelin
+    function max(uint a, uint b) internal pure returns (uint) {
+        return a > b ? a : b;
+    }
 }
