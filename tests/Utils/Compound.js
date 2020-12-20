@@ -20,6 +20,10 @@ async function makeComptroller(opts = {}) {
     return await deploy('BoolComptroller');
   }
 
+  if (kind == 'bool-with-term-loans') {
+    return await deploy('BoolComptrollerWithTermLoans');
+  }
+
   if (kind == 'false-marker') {
     return await deploy('FalseMarkerMethodComptroller');
   }
@@ -104,7 +108,7 @@ async function makeComptroller(opts = {}) {
   if (kind == 'unitroller-g5') {
     const unitroller = opts.unitroller || await deploy('Unitroller');
     const comptroller = await deploy('ComptrollerScenarioG5');
-    opts.priceOracleOpts.kind = 'with_term_loans';
+    opts.priceOracleOpts.kind = 'withTermLoans';
     const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
     const closeFactor = etherMantissa(dfn(opts.closeFactor, .051));
     const maxAssets = etherUnsigned(dfn(opts.maxAssets, 10));
@@ -129,9 +133,16 @@ async function makeCToken(opts = {}) {
   const {
     root = saddle.account,
     kind = 'cerc20',
-    with_term_loans = false
+    withTermLoans = false
   } = opts || {};
 
+  if (opts.comptrollerOpts == undefined) {
+    opts.comptrollerOpts = {};
+  }
+  if (withTermLoans && opts.comptrollerOpts.kind == undefined) {
+    //opts.comptrollerOpts.kind = 'unitroller-g5';
+    opts.comptrollerOpts.kind = 'bool';
+  }
   const comptroller = opts.comptroller || await makeComptroller(opts.comptrollerOpts);
   const interestRateModel = opts.interestRateModel || await makeInterestRateModel(opts.interestRateModelOpts);
   const exchangeRate = etherMantissa(dfn(opts.exchangeRate, 1));
@@ -146,7 +157,7 @@ async function makeCToken(opts = {}) {
 
   switch (kind) {
     case 'cether':
-      if (with_term_loans) {
+      if (withTermLoans) {
         contractName = 'CEtherWithTermLoansHarness';
       } else {
         contractName = 'CEtherHarness';
@@ -164,7 +175,7 @@ async function makeCToken(opts = {}) {
       break;
 
     case 'cdai':
-      if (with_term_loans) {
+      if (withTermLoans) {
         cDaiMakerName = 'CDaiWithTermLoansDelegateMakerHarness';
         cDelegateeName = 'CDaiWithTermLoansDelegateHarness';
         cDelegatorName = 'CDaiWithTermLoansDelegator';
@@ -195,7 +206,7 @@ async function makeCToken(opts = {}) {
 
     case 'ccomp':
       underlying = await deploy('Comp', [opts.compHolder || root]);
-      if (with_term_loans) {
+      if (withTermLoans) {
           cDelegateeName = 'CCompWithTermLoansLikeDelegate';
           cDelegatorName = 'CErc20WithTermLoansDelegator';
       } else {
@@ -223,9 +234,11 @@ async function makeCToken(opts = {}) {
     case 'cerc20':
     default:
       underlying = opts.underlying || await makeToken(opts.underlyingOpts);
-      if (with_term_loans) {
-        cDelegateeName = 'CErc20WithTermLoansDelegateHarness';
-        cDelegatorName = 'CErc20WithTermLoansDelegator';
+      if (withTermLoans) {
+        //cDelegateeName = 'CErc20WithTermLoansDelegateHarness';
+        //cDelegatorName = 'CErc20WithTermLoansDelegator';
+        cDelegateeName = 'CErc20DelegateHarness';
+        cDelegatorName = 'CErc20Delegator';
       } else {
         cDelegateeName = 'CErc20DelegateHarness';
         cDelegatorName = 'CErc20Delegator';
@@ -309,7 +322,7 @@ async function makePriceOracle(opts = {}) {
 
   if (kind == 'simple') {
     return await deploy('SimplePriceOracle');
-  } else if (kind == 'with_term_loans') {
+  } else if (kind == 'withTermLoans') {
     return await deploy('SimplePriceOracleWithTermLoans');
   }
 }
@@ -338,19 +351,24 @@ async function totalSupply(token) {
 }
 
 function cTokenIsTermLoans(cToken) {
-  return ctoken._jsonInterface[0].inputs[1].internalType.includes('WithTermLoans');
+  return cToken._jsonInterface[0].inputs[1].internalType.includes('WithTermLoans');
 }
 
-async function borrowSnapshot(cToken, account) {
-  const result = await call(cToken, 'harnessAccountBorrows', [account]);
-  retObject = {
+async function borrowSnapshot(cToken, account, loanIndex=null) {
+  const isTermLoans = cTokenIsTermLoans(cToken);
+  let args = [account];
+  if (isTermLoans) {
+    args.push(loanIndex);
+  }
+  const result = await call(cToken, 'harnessAccountBorrows', args);
+  let retObject = {
     principal: etherUnsigned(result.principal),
     interestIndex: etherUnsigned(result.interestIndex)
   };
-  if (cTokenIsTermLoans(cToken)) {
+  if (isTermLoans) {
     retObject.deadline = result.deadline;
   }
-  return retOject;
+  return retObject;
 }
 
 async function totalBorrows(cToken) {
@@ -487,6 +505,7 @@ async function getSupplyRate(interestRateModel, cash, borrows, reserves, reserve
 
 async function pretendBorrow(cToken, borrower, accountIndex, marketIndex, principalRaw, blockNumber = 2e7, loanIndex = 0, deadline = null) {
   await send(cToken, 'harnessSetTotalBorrows', [etherUnsigned(principalRaw)]);
+  let accountBorrowsArguments;
   if (cTokenIsTermLoans(cToken)) {
     if (deadline == null) {
       deadline = UInt256Max();

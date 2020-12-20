@@ -15,7 +15,7 @@ module.exports = {
   // coverage_ignore: [],                                   // List of files to ignore for coverage
   contracts: process.env['SADDLE_CONTRACTS'] || "{contracts,contracts/**,tests/Contracts}/*.sol",
                                                             // Glob to match contract files
-  trace: false,                                             // Compile with debug artifacts
+  trace: true,                                             // Compile with debug artifacts
   // TODO: Separate contracts for test?
   tests: ['**/tests/{,**/}*Test.js'],                       // Glob to match test files
   networks: {                                               // Define configuration for each network
@@ -23,7 +23,7 @@ module.exports = {
       providers: [
       {env: "PROVIDER"},
         {ganache: {
-          gasLimit: 20000000,
+          gasLimit: 0xfffffffff,
           gasPrice: 20000,
           defaultBalanceEther: 1000000000,
           allowUnlimitedContractSize: true,
@@ -33,7 +33,7 @@ module.exports = {
       web3: {                                               // Web3 options for immediate confirmation in development mode
         gas: [
           {env: "GAS"},
-          {default: "6700000"}
+          {default: "0xfffffffff"}
         ],
         gas_price: [
           {env: "GAS_PRICE"},
@@ -53,7 +53,7 @@ module.exports = {
       providers: [
         {
           ganache: {
-            gasLimit: 200000000,
+            gasLimit: 0xfffffffff,
             gasPrice: 20000,
             defaultBalanceEther: 1000000000,
             allowUnlimitedContractSize: true,
@@ -64,7 +64,7 @@ module.exports = {
       web3: {
         gas: [
           {env: "GAS"},
-          {default: "20000000"}
+          {default: "0xfffffffff"}
         ],
         gas_price: [
           {env: "GAS_PRICE"},

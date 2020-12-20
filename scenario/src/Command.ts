@@ -222,6 +222,7 @@ export class Fetcher<Args, Ret> extends Expression<Args> {
   }
 
   async fetch(world: World, event: Event): Promise<Ret> {
+    console.log(event);
     let args = await this.getArgs(world, event);
     return await this.fetcher(world, args);
   }
