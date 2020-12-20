@@ -246,7 +246,7 @@ contract CTokenWithTermLoansInterface is CTokenWIthTermLoansStorage {
     function _setInterestRateModel(InterestRateModel newInterestRateModel) public returns (uint);
 }
 
-contract CErc20WithTermLoansInterface is CErc20Storage, CErc20Interface {
+contract CErc20WithTermLoansInterface is CErc20Storage {
 
     /*** User Interface ***/
 
