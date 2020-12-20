@@ -100,12 +100,36 @@ async function makeComptroller(opts = {}) {
 
     return Object.assign(unitroller, { priceOracle, comp });
   }
+
+  if (kind == 'unitroller-g5') {
+    const unitroller = opts.unitroller || await deploy('Unitroller');
+    const comptroller = await deploy('ComptrollerScenarioG5');
+    opts.priceOracleOpts.kind = 'with_term_loans';
+    const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
+    const closeFactor = etherMantissa(dfn(opts.closeFactor, .051));
+    const maxAssets = etherUnsigned(dfn(opts.maxAssets, 10));
+    const liquidationIncentive = etherMantissa(1);
+    const compRate = etherUnsigned(dfn(opts.compRate, 1e18));
+    const compMarkets = opts.compMarkets || [];
+    const otherMarkets = opts.otherMarkets || [];
+
+    await send(unitroller, '_setPendingImplementation', [comptroller._address]);
+    await send(comptroller, '_become', [unitroller._address, compRate, compMarkets, otherMarkets]);
+    mergeInterface(unitroller, comptroller);
+    await send(unitroller, '_setLiquidationIncentive', [liquidationIncentive]);
+    await send(unitroller, '_setCloseFactor', [closeFactor]);
+    await send(unitroller, '_setMaxAssets', [maxAssets]);
+    await send(unitroller, '_setPriceOracle', [priceOracle._address]);
+
+    return Object.assign(unitroller, { priceOracle });
+  }
 }
 
 async function makeCToken(opts = {}) {
   const {
     root = saddle.account,
-    kind = 'cerc20'
+    kind = 'cerc20',
+    with_term_loans = false
   } = opts || {};
 
   const comptroller = opts.comptroller || await makeComptroller(opts.comptrollerOpts);
@@ -117,11 +141,17 @@ async function makeCToken(opts = {}) {
   const admin = opts.admin || root;
 
   let cToken, underlying;
+  let contractName, cDelegatorName, cDelegateeName, cDaiMakerName;
   let cDelegator, cDelegatee, cDaiMaker;
 
   switch (kind) {
     case 'cether':
-      cToken = await deploy('CEtherHarness',
+      if (with_term_loans) {
+        contractName = 'CEtherWithTermLoansHarness';
+      } else {
+        contractName = 'CEtherHarness';
+      }
+      cToken = await deploy(contractName,
         [
           comptroller._address,
           interestRateModel._address,
@@ -134,10 +164,19 @@ async function makeCToken(opts = {}) {
       break;
 
     case 'cdai':
-      cDaiMaker  = await deploy('CDaiDelegateMakerHarness');
+      if (with_term_loans) {
+        cDaiMakerName = 'CDaiWithTermLoansDelegateMakerHarness';
+        cDelegateeName = 'CDaiWithTermLoansDelegateHarness';
+        cDelegatorName = 'CDaiWithTermLoansDelegator';
+      } else {
+        cDaiMakerName = 'CDaiDelegateMakerHarness';
+        cDelegateeName = 'CDaiDelegateHarness';
+        cDelegatorName = 'CDaiDelegator';
+      }
+      cDaiMaker  = await deploy(cDaiMakerName);
       underlying = cDaiMaker;
-      cDelegatee = await deploy('CDaiDelegateHarness');
-      cDelegator = await deploy('CErc20Delegator',
+      cDelegatee = await deploy(cDelegateeName);
+      cDelegator = await deploy(cDelegatorName,
         [
           underlying._address,
           comptroller._address,
@@ -151,13 +190,20 @@ async function makeCToken(opts = {}) {
           encodeParameters(['address', 'address'], [cDaiMaker._address, cDaiMaker._address])
         ]
       );
-      cToken = await saddle.getContractAt('CDaiDelegateHarness', cDelegator._address);
+      cToken = await saddle.getContractAt(cDelegateeName, cDelegator._address);
       break;
 
     case 'ccomp':
       underlying = await deploy('Comp', [opts.compHolder || root]);
-      cDelegatee = await deploy('CCompLikeDelegate');
-      cDelegator = await deploy('CErc20Delegator',
+      if (with_term_loans) {
+          cDelegateeName = 'CCompWithTermLoansLikeDelegate';
+          cDelegatorName = 'CErc20WithTermLoansDelegator';
+      } else {
+          cDelegateeName = 'CCompLikeDelegate';
+          cDelegatorName = 'CErc20Delegator';
+      }
+      cDelegatee = await deploy(cDelegateeName);
+      cDelegator = await deploy(cDelegatorName,
         [
           underlying._address,
           comptroller._address,
@@ -171,14 +217,21 @@ async function makeCToken(opts = {}) {
           "0x0"
         ]
       );
-      cToken = await saddle.getContractAt('CCompLikeDelegate', cDelegator._address);
+      cToken = await saddle.getContractAt(cDelegateeName, cDelegator._address);
       break;
 
     case 'cerc20':
     default:
       underlying = opts.underlying || await makeToken(opts.underlyingOpts);
-      cDelegatee = await deploy('CErc20DelegateHarness');
-      cDelegator = await deploy('CErc20Delegator',
+      if (with_term_loans) {
+        cDelegateeName = 'CErc20WithTermLoansDelegateHarness';
+        cDelegatorName = 'CErc20WithTermLoansDelegator';
+      } else {
+        cDelegateeName = 'CErc20DelegateHarness';
+        cDelegatorName = 'CErc20Delegator';
+      }
+      cDelegatee = await deploy(cDelegateeName);
+      cDelegator = await deploy(cDelegatorName,
         [
           underlying._address,
           comptroller._address,
@@ -192,7 +245,7 @@ async function makeCToken(opts = {}) {
           "0x0"
         ]
       );
-      cToken = await saddle.getContractAt('CErc20DelegateHarness', cDelegator._address);
+      cToken = await saddle.getContractAt(cDelegateeName, cDelegator._address);
       break;
   }
 
@@ -256,6 +309,8 @@ async function makePriceOracle(opts = {}) {
 
   if (kind == 'simple') {
     return await deploy('SimplePriceOracle');
+  } else if (kind == 'with_term_loans') {
+    return await deploy('SimplePriceOracleWithTermLoans');
   }
 }
 
@@ -282,9 +337,20 @@ async function totalSupply(token) {
   return etherUnsigned(await call(token, 'totalSupply'));
 }
 
+function cTokenIsTermLoans(cToken) {
+  return ctoken._jsonInterface[0].inputs[1].internalType.includes('WithTermLoans');
+}
+
 async function borrowSnapshot(cToken, account) {
-  const { principal, interestIndex } = await call(cToken, 'harnessAccountBorrows', [account]);
-  return { principal: etherUnsigned(principal), interestIndex: etherUnsigned(interestIndex) };
+  const result = await call(cToken, 'harnessAccountBorrows', [account]);
+  retObject = {
+    principal: etherUnsigned(result.principal),
+    interestIndex: etherUnsigned(result.interestIndex)
+  };
+  if (cTokenIsTermLoans(cToken)) {
+    retObject.deadline = result.deadline;
+  }
+  return retOject;
 }
 
 async function totalBorrows(cToken) {
@@ -419,9 +485,18 @@ async function getSupplyRate(interestRateModel, cash, borrows, reserves, reserve
   return call(interestRateModel, 'getSupplyRate', [cash, borrows, reserves, reserveFactor].map(etherUnsigned));
 }
 
-async function pretendBorrow(cToken, borrower, accountIndex, marketIndex, principalRaw, blockNumber = 2e7) {
+async function pretendBorrow(cToken, borrower, accountIndex, marketIndex, principalRaw, blockNumber = 2e7, loanIndex = 0, deadline = null) {
   await send(cToken, 'harnessSetTotalBorrows', [etherUnsigned(principalRaw)]);
-  await send(cToken, 'harnessSetAccountBorrows', [borrower, etherUnsigned(principalRaw), etherMantissa(accountIndex)]);
+  if (cTokenIsTermLoans(cToken)) {
+    if (deadline == null) {
+      deadline = UInt256Max();
+    }
+    // TODO does deadline need etherMantissa?
+    accountBorrowsArguments = [borrower, loanIndex, etherUnsigned(principalRaw), etherMantissa(accountIndex), deadline];
+  } else {
+    accountBorrowsArguments = [borrower, etherUnsigned(principalRaw), etherMantissa(accountIndex)];
+  }
+  await send(cToken, 'harnessSetAccountBorrows', accountBorrowsArguments);
   await send(cToken, 'harnessSetBorrowIndex', [etherMantissa(marketIndex)]);
   await send(cToken, 'harnessSetAccrualBlockNumber', [etherUnsigned(blockNumber)]);
   await send(cToken, 'harnessSetBlockNumber', [etherUnsigned(blockNumber)]);
