@@ -1,6 +1,6 @@
 pragma solidity ^0.5.16;
 
-contract ComptrollerInterface {
+contract ComptrollerWithTermLoansInterface {
     /// @notice Indicator that this is a Comptroller contract (for inspection)
     bool public constant isComptroller = true;
 
@@ -17,26 +17,29 @@ contract ComptrollerInterface {
     function redeemAllowed(address cToken, address redeemer, uint redeemTokens) external returns (uint);
     function redeemVerify(address cToken, address redeemer, uint redeemAmount, uint redeemTokens) external;
 
-    function borrowAllowed(address cToken, address borrower, uint borrowAmount) external returns (uint);
-    function borrowVerify(address cToken, address borrower, uint borrowAmount) external;
+    function borrowAllowed(address cToken, address borrower, uint borrowAmount, uint loanIndex) external returns (uint);
+    function borrowVerify(address cToken, address borrower, uint borrowAmount, uint loanIndex) external;
 
     function repayBorrowAllowed(
         address cToken,
         address payer,
         address borrower,
-        uint repayAmount) external returns (uint);
+        uint repayAmount,
+        uint loanIndex) external returns (uint);
     function repayBorrowVerify(
         address cToken,
         address payer,
         address borrower,
         uint repayAmount,
-        uint borrowerIndex) external;
+        uint borrowerIndex,
+        uint loanIndex) external;
 
     function liquidateBorrowAllowed(
         address cTokenBorrowed,
         address cTokenCollateral,
         address liquidator,
         address borrower,
+        uint loanIndex,
         uint repayAmount) external returns (uint);
     function liquidateBorrowVerify(
         address cTokenBorrowed,
@@ -44,7 +47,8 @@ contract ComptrollerInterface {
         address liquidator,
         address borrower,
         uint repayAmount,
-        uint seizeTokens) external;
+        uint seizeTokens,
+        uint loanIndex) external;
 
     function seizeAllowed(
         address cTokenCollateral,

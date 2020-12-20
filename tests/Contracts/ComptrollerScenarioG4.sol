@@ -1,11 +1,11 @@
 pragma solidity ^0.5.16;
 
-import "../../contracts/ComptrollerG4.sol";
+import "../../contracts/ComptrollerWithTermLoans.sol";
 
-contract ComptrollerScenarioG4 is ComptrollerG4 {
+contract ComptrollerScenario is ComptrollerWithTermLoans {
     uint public blockNumber;
 
-    constructor() ComptrollerG4() public {}
+    constructor() ComptrollerWithTermLoans() public {}
 
     function fastForward(uint blocks) public returns (uint) {
         blockNumber += blocks;

@@ -9,7 +9,7 @@ contract CEtherHarness is CEther {
 
     mapping (address => bool) public failTransferToAddresses;
 
-    constructor(ComptrollerInterface comptroller_,
+    constructor(ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa,
                 string memory name_,
@@ -92,30 +92,30 @@ contract CEtherHarness is CEther {
         return super.redeemFresh(account, cTokenAmount, underlyingAmount);
     }
 
-    function harnessAccountBorrows(address account) public view returns (uint principal, uint interestIndex) {
-        BorrowSnapshot memory snapshot = accountBorrows[account];
-        return (snapshot.principal, snapshot.interestIndex);
+    function harnessAccountBorrows(address account, uint loanIndex) public view returns (uint principal, uint interestIndex, uint deadline) {
+        BorrowSnapshot memory snapshot = accountBorrows[account][loanIndex];
+        return (snapshot.principal, snapshot.interestIndex, snapshot.deadline);
     }
 
-    function harnessSetAccountBorrows(address account, uint principal, uint interestIndex) public {
-        accountBorrows[account] = BorrowSnapshot({principal: principal, interestIndex: interestIndex});
+    function harnessSetAccountBorrows(address account, uint loanIndex, uint principal, uint interestIndex, uint deadline) public {
+        accountBorrows[account][loanIndex] = BorrowSnapshot({principal: principal, interestIndex: interestIndex, deadline: deadline});
     }
 
     function harnessSetBorrowIndex(uint borrowIndex_) public {
         borrowIndex = borrowIndex_;
     }
 
-    function harnessBorrowFresh(address payable account, uint borrowAmount) public returns (uint) {
-        return borrowFresh(account, borrowAmount);
+    function harnessBorrowFresh(address payable account, uint borrowAmount, uint deadline) public returns (uint) {
+        return borrowFresh(account, borrowAmount, deadline);
     }
 
-    function harnessRepayBorrowFresh(address payer, address account, uint repayBorrowAmount) public payable returns (uint) {
-        (uint err,) = repayBorrowFresh(payer, account, repayBorrowAmount);
+    function harnessRepayBorrowFresh(address payer, address account, uint repayBorrowAmount, uint deadline) public payable returns (uint) {
+        (uint err,) = repayBorrowFresh(payer, account, repayBorrowAmount, deadline);
         return err;
     }
 
-    function harnessLiquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, CToken cTokenCollateral) public returns (uint) {
-        (uint err,) = liquidateBorrowFresh(liquidator, borrower, repayAmount, cTokenCollateral);
+    function harnessLiquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, uint loanIndex, CToken cTokenCollateral) public returns (uint) {
+        (uint err,) = liquidateBorrowFresh(liquidator, borrower, repayAmount, loanIndex, cTokenCollateral);
         return err;
     }
 
@@ -163,7 +163,7 @@ contract CEtherScenario is CEther {
                 string memory symbol_,
                 uint8 decimals_,
                 address payable admin_,
-                ComptrollerInterface comptroller_,
+                ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa)
         CEther(comptroller_,

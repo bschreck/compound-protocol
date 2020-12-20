@@ -14,7 +14,7 @@ contract CErc20Harness is CErc20Immutable {
     mapping (address => bool) public failTransferToAddresses;
 
     constructor(address underlying_,
-                ComptrollerInterface comptroller_,
+                ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa_,
                 string memory name_,
@@ -103,30 +103,30 @@ contract CErc20Harness is CErc20Immutable {
         return super.redeemFresh(account, cTokenAmount, underlyingAmount);
     }
 
-    function harnessAccountBorrows(address account) public view returns (uint principal, uint interestIndex) {
-        BorrowSnapshot memory snapshot = accountBorrows[account];
-        return (snapshot.principal, snapshot.interestIndex);
+    function harnessAccountBorrows(address account, uint loanIndex) public view returns (uint principal, uint interestIndex, uint deadline) {
+        BorrowSnapshot memory snapshot = accountBorrows[account][loanIndex];
+        return (snapshot.principal, snapshot.interestIndex, snapshot.deadline);
     }
 
-    function harnessSetAccountBorrows(address account, uint principal, uint interestIndex) public {
-        accountBorrows[account] = BorrowSnapshot({principal: principal, interestIndex: interestIndex});
+    function harnessSetAccountBorrows(address account, uint loanIndex, uint principal, uint interestIndex, uint deadline) public {
+        accountBorrows[account][loanIndex] = BorrowSnapshot({principal: principal, interestIndex: interestIndex, deadline: deadline});
     }
 
     function harnessSetBorrowIndex(uint borrowIndex_) public {
         borrowIndex = borrowIndex_;
     }
 
-    function harnessBorrowFresh(address payable account, uint borrowAmount) public returns (uint) {
-        return borrowFresh(account, borrowAmount);
+    function harnessBorrowFresh(address payable account, uint borrowAmount, uint loanIndex) public returns (uint) {
+        return borrowFresh(account, borrowAmount, loanIndex);
     }
 
-    function harnessRepayBorrowFresh(address payer, address account, uint repayAmount) public returns (uint) {
-        (uint err,) = repayBorrowFresh(payer, account, repayAmount);
+    function harnessRepayBorrowFresh(address payer, address account, uint repayAmount, uint loanIndex) public returns (uint) {
+        (uint err,) = repayBorrowFresh(payer, account, repayAmount, loanIndex);
         return err;
     }
 
-    function harnessLiquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, CToken cTokenCollateral) public returns (uint) {
-        (uint err,) = liquidateBorrowFresh(liquidator, borrower, repayAmount, cTokenCollateral);
+    function harnessLiquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, uint loanIndex, CToken cTokenCollateral) public returns (uint) {
+        (uint err,) = liquidateBorrowFresh(liquidator, borrower, repayAmount, loanIndex, cTokenCollateral);
         return err;
     }
 
@@ -146,14 +146,14 @@ contract CErc20Harness is CErc20Immutable {
         interestRateModel = InterestRateModel(newInterestRateModelAddress);
     }
 
-    function harnessCallBorrowAllowed(uint amount) public returns (uint) {
-        return comptroller.borrowAllowed(address(this), msg.sender, amount);
+    function harnessCallBorrowAllowed(uint amount, uint loanIndex) public returns (uint) {
+        return comptroller.borrowAllowed(address(this), msg.sender, amount, loanIndex);
     }
 }
 
 contract CErc20Scenario is CErc20Immutable {
     constructor(address underlying_,
-                ComptrollerInterface comptroller_,
+                ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa_,
                 string memory name_,
@@ -186,7 +186,7 @@ contract CErc20Scenario is CErc20Immutable {
 
 contract CEvil is CErc20Scenario {
     constructor(address underlying_,
-                ComptrollerInterface comptroller_,
+                ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa_,
                 string memory name_,
@@ -210,7 +210,7 @@ contract CEvil is CErc20Scenario {
 
 contract CErc20DelegatorScenario is CErc20Delegator {
     constructor(address underlying_,
-                ComptrollerInterface comptroller_,
+                ComptrollerWithTermLoansInterface comptroller_,
                 InterestRateModel interestRateModel_,
                 uint initialExchangeRateMantissa_,
                 string memory name_,
@@ -326,30 +326,30 @@ contract CErc20DelegateHarness is CErc20Delegate {
         return super.redeemFresh(account, cTokenAmount, underlyingAmount);
     }
 
-    function harnessAccountBorrows(address account) public view returns (uint principal, uint interestIndex) {
-        BorrowSnapshot memory snapshot = accountBorrows[account];
-        return (snapshot.principal, snapshot.interestIndex);
+    function harnessAccountBorrows(address account, uint loanIndex) public view returns (uint principal, uint interestIndex, uint deadline) {
+        BorrowSnapshot memory snapshot = accountBorrows[account][loanIndex];
+        return (snapshot.principal, snapshot.interestIndex, snapshot.deadline);
     }
 
-    function harnessSetAccountBorrows(address account, uint principal, uint interestIndex) public {
-        accountBorrows[account] = BorrowSnapshot({principal: principal, interestIndex: interestIndex});
+    function harnessSetAccountBorrows(address account, uint loanIndex, uint principal, uint interestIndex, uint deadline) public {
+        accountBorrows[account][loanIndex] = BorrowSnapshot({principal: principal, interestIndex: interestIndex, deadline: deadline});
     }
 
     function harnessSetBorrowIndex(uint borrowIndex_) public {
         borrowIndex = borrowIndex_;
     }
 
-    function harnessBorrowFresh(address payable account, uint borrowAmount) public returns (uint) {
-        return borrowFresh(account, borrowAmount);
+    function harnessBorrowFresh(address payable account, uint borrowAmount, uint deadline) public returns (uint) {
+        return borrowFresh(account, borrowAmount, deadline);
     }
 
-    function harnessRepayBorrowFresh(address payer, address account, uint repayAmount) public returns (uint) {
-        (uint err,) = repayBorrowFresh(payer, account, repayAmount);
+    function harnessRepayBorrowFresh(address payer, address account, uint repayAmount, uint loanIndex) public returns (uint) {
+        (uint err,) = repayBorrowFresh(payer, account, repayAmount, loanIndex);
         return err;
     }
 
-    function harnessLiquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, CToken cTokenCollateral) public returns (uint) {
-        (uint err,) = liquidateBorrowFresh(liquidator, borrower, repayAmount, cTokenCollateral);
+    function harnessLiquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, uint loanIndex, CToken cTokenCollateral) public returns (uint) {
+        (uint err,) = liquidateBorrowFresh(liquidator, borrower, repayAmount, loanIndex, cTokenCollateral);
         return err;
     }
 
@@ -369,8 +369,8 @@ contract CErc20DelegateHarness is CErc20Delegate {
         interestRateModel = InterestRateModel(newInterestRateModelAddress);
     }
 
-    function harnessCallBorrowAllowed(uint amount) public returns (uint) {
-        return comptroller.borrowAllowed(address(this), msg.sender, amount);
+    function harnessCallBorrowAllowed(uint amount, uint loanIndex) public returns (uint) {
+        return comptroller.borrowAllowed(address(this), msg.sender, amount, loanIndex);
     }
 }
 

@@ -1,6 +1,6 @@
 pragma solidity ^0.5.16;
 
-import "./ComptrollerInterface.sol";
+import "./ComptrollerWithTermLoansInterface.sol";
 import "./InterestRateModel.sol";
 
 contract CTokenStorage {
@@ -48,7 +48,7 @@ contract CTokenStorage {
     /**
      * @notice Contract which oversees inter-cToken operations
      */
-    ComptrollerInterface public comptroller;
+    ComptrollerWithTermLoansInterface public comptroller;
 
     /**
      * @notice Model which tells what the current interest rate should be
@@ -104,16 +104,19 @@ contract CTokenStorage {
      * @notice Container for borrow balance information
      * @member principal Total balance (with accrued interest), after applying the most recent balance-changing action
      * @member interestIndex Global borrowIndex as of the most recent balance-changing action
+     * @member deadline Block number when loan needs to be repayed (0 if no deadline)
      */
     struct BorrowSnapshot {
         uint principal;
         uint interestIndex;
+        uint deadline;
     }
 
     /**
-     * @notice Mapping of account addresses to outstanding borrow balances
+     * @notice Mapping of account addresses to outstanding borrow balances, with separate loans keyed by an index
      */
-    mapping(address => BorrowSnapshot) internal accountBorrows;
+    mapping(address => mapping (uint => BorrowSnapshot)) internal accountBorrows;
+    mapping(address => uint[]) internal accountActiveLoanIndices;
 }
 
 contract CTokenInterface is CTokenStorage {
@@ -143,17 +146,17 @@ contract CTokenInterface is CTokenStorage {
     /**
      * @notice Event emitted when underlying is borrowed
      */
-    event Borrow(address borrower, uint borrowAmount, uint accountBorrows, uint totalBorrows);
+    event Borrow(address borrower, uint borrowAmount, uint loanIndex, uint deadline, uint accountBorrows, uint totalBorrows);
 
     /**
      * @notice Event emitted when a borrow is repaid
      */
-    event RepayBorrow(address payer, address borrower, uint repayAmount, uint accountBorrows, uint totalBorrows);
+    event RepayBorrow(address payer, address borrower, uint loanIndex, uint repayAmount, uint accountBorrows, uint totalBorrows);
 
     /**
      * @notice Event emitted when a borrow is liquidated
      */
-    event LiquidateBorrow(address liquidator, address borrower, uint repayAmount, address cTokenCollateral, uint seizeTokens);
+    event LiquidateBorrow(address liquidator, address borrower, uint repayAmount, uint loanIndex, address cTokenCollateral, uint seizeTokens);
 
 
     /*** Admin Events ***/
@@ -171,7 +174,7 @@ contract CTokenInterface is CTokenStorage {
     /**
      * @notice Event emitted when comptroller is changed
      */
-    event NewComptroller(ComptrollerInterface oldComptroller, ComptrollerInterface newComptroller);
+    event NewComptroller(ComptrollerWithTermLoansInterface oldComptroller, ComptrollerWithTermLoansInterface newComptroller);
 
     /**
      * @notice Event emitted when interestRateModel is changed
@@ -218,6 +221,8 @@ contract CTokenInterface is CTokenStorage {
     function balanceOf(address owner) external view returns (uint);
     function balanceOfUnderlying(address owner) external returns (uint);
     function getAccountSnapshot(address account) external view returns (uint, uint, uint, uint);
+    function getAccountSnapshotByLoan(address account, uint loanIndex) external view returns (uint, uint, uint, uint);
+    function getLoanIndices(address account) external view returns (uint[] memory);
     function borrowRatePerBlock() external view returns (uint);
     function supplyRatePerBlock() external view returns (uint);
     function totalBorrowsCurrent() external returns (uint);
@@ -234,7 +239,7 @@ contract CTokenInterface is CTokenStorage {
 
     function _setPendingAdmin(address payable newPendingAdmin) external returns (uint);
     function _acceptAdmin() external returns (uint);
-    function _setComptroller(ComptrollerInterface newComptroller) public returns (uint);
+    function _setComptroller(ComptrollerWithTermLoansInterface newComptroller) public returns (uint);
     function _setReserveFactor(uint newReserveFactorMantissa) external returns (uint);
     function _reduceReserves(uint reduceAmount) external returns (uint);
     function _setInterestRateModel(InterestRateModel newInterestRateModel) public returns (uint);

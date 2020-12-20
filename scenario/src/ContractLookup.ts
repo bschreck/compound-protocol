@@ -86,7 +86,7 @@ export async function getMaximillion(world: World): Promise<Comptroller> {
 }
 
 export async function getComptroller(world: World): Promise<Comptroller> {
-  return getWorldContract(world, [['Contracts', 'Comptroller']]);
+  return getWorldContract(world, [['Contracts', 'ComptrollerWithTermLoans']]);
 }
 
 export async function getComptrollerImpl(world: World, comptrollerImplArg: Event): Promise<ComptrollerImpl> {

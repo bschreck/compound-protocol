@@ -23,9 +23,10 @@ contract Maximillion {
      * @notice msg.sender sends Ether to repay an account's borrow in the cEther market
      * @dev The provided Ether is applied towards the borrow balance, any excess is refunded
      * @param borrower The address of the borrower account to repay on behalf of
+     * @param loanIndex Index of loan to repay
      */
-    function repayBehalf(address borrower) public payable {
-        repayBehalfExplicit(borrower, cEther);
+    function repayBehalf(address borrower, uint loanIndex) public payable {
+        repayBehalfExplicit(borrower, cEther, loanIndex);
     }
 
     /**
@@ -33,15 +34,16 @@ contract Maximillion {
      * @dev The provided Ether is applied towards the borrow balance, any excess is refunded
      * @param borrower The address of the borrower account to repay on behalf of
      * @param cEther_ The address of the cEther contract to repay in
+     * @param loanIndex Index of loan to repay
      */
-    function repayBehalfExplicit(address borrower, CEther cEther_) public payable {
+    function repayBehalfExplicit(address borrower, CEther cEther_, uint loanIndex) public payable {
         uint received = msg.value;
         uint borrows = cEther_.borrowBalanceCurrent(borrower);
         if (received > borrows) {
-            cEther_.repayBorrowBehalf.value(borrows)(borrower);
+            cEther_.repayBorrowBehalf.value(borrows)(borrower, loanIndex);
             msg.sender.transfer(received - borrows);
         } else {
-            cEther_.repayBorrowBehalf.value(received)(borrower);
+            cEther_.repayBorrowBehalf.value(received)(borrower, loanIndex);
         }
     }
 }

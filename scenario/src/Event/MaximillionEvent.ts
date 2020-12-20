@@ -47,7 +47,8 @@ async function verifyMaximillion(world: World, maximillion: Maximillion, apiKey:
 
 async function repayBehalf(world: World, from: string, maximillion: Maximillion, behalf: string): Promise<World> {
   let showAmount = showTrxValue(world);
-  let invokation = await invoke(world, maximillion.methods.repayBehalf(behalf), from);
+  let loanIndex = 0;
+  let invokation = await invoke(world, maximillion.methods.repayBehalf(behalf, loanIndex), from);
 
   world = addAction(
     world,

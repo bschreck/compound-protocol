@@ -19,7 +19,7 @@ contract CErc20 is CToken, CErc20Interface {
      * @param decimals_ ERC-20 decimal precision of this token
      */
     function initialize(address underlying_,
-                        ComptrollerInterface comptroller_,
+                        ComptrollerWithTermLoansInterface comptroller_,
                         InterestRateModel interestRateModel_,
                         uint initialExchangeRateMantissa_,
                         string memory name_,
@@ -78,10 +78,11 @@ contract CErc20 is CToken, CErc20Interface {
     /**
      * @notice Sender repays their own borrow
      * @param repayAmount The amount to repay
+     * @param loanIndex Index of loan to repay
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function repayBorrow(uint repayAmount) external returns (uint) {
-        (uint err,) = repayBorrowInternal(repayAmount);
+    function repayBorrow(uint repayAmount, uint loanIndex) external returns (uint) {
+        (uint err,) = repayBorrowInternal(repayAmount, loanIndex);
         return err;
     }
 
@@ -89,10 +90,11 @@ contract CErc20 is CToken, CErc20Interface {
      * @notice Sender repays a borrow belonging to borrower
      * @param borrower the account with the debt being payed off
      * @param repayAmount The amount to repay
+     * @param loanIndex Index of loan to repay
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function repayBorrowBehalf(address borrower, uint repayAmount) external returns (uint) {
-        (uint err,) = repayBorrowBehalfInternal(borrower, repayAmount);
+    function repayBorrowBehalf(address borrower, uint repayAmount, uint loanIndex) external returns (uint) {
+        (uint err,) = repayBorrowBehalfInternal(borrower, repayAmount, loanIndex);
         return err;
     }
 
@@ -101,11 +103,12 @@ contract CErc20 is CToken, CErc20Interface {
      *  The collateral seized is transferred to the liquidator.
      * @param borrower The borrower of this cToken to be liquidated
      * @param repayAmount The amount of the underlying borrowed asset to repay
+     * @param loanIndex Index of loan to liquidate
      * @param cTokenCollateral The market in which to seize collateral from the borrower
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function liquidateBorrow(address borrower, uint repayAmount, CTokenInterface cTokenCollateral) external returns (uint) {
-        (uint err,) = liquidateBorrowInternal(borrower, repayAmount, cTokenCollateral);
+    function liquidateBorrow(address borrower, uint repayAmount, uint loanIndex, CTokenInterface cTokenCollateral) external returns (uint) {
+        (uint err,) = liquidateBorrowInternal(borrower, repayAmount, loanIndex, cTokenCollateral);
         return err;
     }
 

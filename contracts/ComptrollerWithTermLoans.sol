@@ -4,16 +4,17 @@ import "./CToken.sol";
 import "./ErrorReporter.sol";
 import "./Exponential.sol";
 import "./PriceOracle.sol";
-import "./ComptrollerInterface.sol";
+import "./ComptrollerWithTermLoansInterface.sol";
 import "./ComptrollerStorage.sol";
 import "./Unitroller.sol";
 import "./Governance/Comp.sol";
+import "./CarefulMath.sol";
 
 /**
  * @title Compound's Comptroller Contract
  * @author Compound
  */
-contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, ComptrollerErrorReporter, Exponential {
+contract ComptrollerWithTermLoans is ComptrollerV3Storage, ComptrollerWithTermLoansInterface, ComptrollerErrorReporter, CarefulMath, Exponential {
     /// @notice Emitted when an admin supports a market
     event MarketListed(CToken cToken);
 
@@ -168,7 +169,7 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
     /**
      * @notice Removes asset from sender's account liquidity calculation
      * @dev Sender must not have an outstanding borrow balance in the asset,
-     *  or be providing neccessary collateral for an outstanding borrow.
+     *  or be providing necessary collateral for an outstanding borrow.
      * @param cTokenAddress The address of the asset to be removed
      * @return Whether or not the account successfully exited the market
      */
@@ -337,9 +338,11 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
      * @param cToken The market to verify the borrow against
      * @param borrower The account which would borrow the asset
      * @param borrowAmount The amount of underlying the account would borrow
+     * @param loanIndex The index of the borrower's loan
      * @return 0 if the borrow is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
-    function borrowAllowed(address cToken, address borrower, uint borrowAmount) external returns (uint) {
+    function borrowAllowed(address cToken, address borrower, uint borrowAmount, uint loanIndex) external returns (uint) {
+        // TODO: do we need loanIndex?
         // Pausing is a very serious situation - we revert to sound the alarms
         require(!borrowGuardianPaused[cToken], "borrow is paused");
 
@@ -386,12 +389,14 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
      * @param cToken Asset whose underlying is being borrowed
      * @param borrower The address borrowing the underlying
      * @param borrowAmount The amount of the underlying asset requested to borrow
+     * @param loanIndex Index of loan to verify
      */
-    function borrowVerify(address cToken, address borrower, uint borrowAmount) external {
+    function borrowVerify(address cToken, address borrower, uint borrowAmount, uint loanIndex) external {
         // Shh - currently unused
         cToken;
         borrower;
         borrowAmount;
+        loanIndex;
 
         // Shh - we don't ever want this hook to be marked pure
         if (false) {
@@ -405,17 +410,20 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
      * @param payer The account which would repay the asset
      * @param borrower The account which would borrowed the asset
      * @param repayAmount The amount of the underlying asset the account would repay
+     * @param loanIndex Index of loan to check
      * @return 0 if the repay is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
     function repayBorrowAllowed(
         address cToken,
         address payer,
         address borrower,
-        uint repayAmount) external returns (uint) {
+        uint repayAmount,
+        uint loanIndex) external returns (uint) {
         // Shh - currently unused
         payer;
         borrower;
         repayAmount;
+        loanIndex;
 
         if (!markets[cToken].isListed) {
             return uint(Error.MARKET_NOT_LISTED);
@@ -435,19 +443,23 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
      * @param payer The address repaying the borrow
      * @param borrower The address of the borrower
      * @param actualRepayAmount The amount of underlying being repaid
+     * @param borrowerIndex Index of borrower
+     * @param loanIndex Index of loan to verify
      */
     function repayBorrowVerify(
         address cToken,
         address payer,
         address borrower,
         uint actualRepayAmount,
-        uint borrowerIndex) external {
+        uint borrowerIndex,
+        uint loanIndex) external {
         // Shh - currently unused
         cToken;
         payer;
         borrower;
         actualRepayAmount;
         borrowerIndex;
+        loanIndex;
 
         // Shh - we don't ever want this hook to be marked pure
         if (false) {
@@ -461,6 +473,7 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
      * @param cTokenCollateral Asset which was used as collateral and will be seized
      * @param liquidator The address repaying the borrow and seizing the collateral
      * @param borrower The address of the borrower
+     * @param loanIndex Index of borrower's loan in this particular market
      * @param repayAmount The amount of underlying being repaid
      */
     function liquidateBorrowAllowed(
@@ -468,6 +481,7 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
         address cTokenCollateral,
         address liquidator,
         address borrower,
+        uint loanIndex,
         uint repayAmount) external returns (uint) {
         // Shh - currently unused
         liquidator;
@@ -476,18 +490,28 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
             return uint(Error.MARKET_NOT_LISTED);
         }
 
-        /* The borrower must have shortfall in order to be liquidatable */
-        (Error err, , uint shortfall) = getAccountLiquidityInternal(borrower);
-        if (err != Error.NO_ERROR) {
-            return uint(err);
-        }
-        if (shortfall == 0) {
-            return uint(Error.INSUFFICIENT_SHORTFALL);
+        uint shortfall;
+        Error err;
+        uint timeOverDeadline = 0;
+        // TODO: timeOverDeadline
+        //(err, timeOverDeadline) = getTimeOverDeadline(borrower, cTokenBorrowed, loanIndex);
+
+        if (timeOverDeadline == 0) {
+            /* The borrower must have shortfall in order to be liquidatable */
+            // TODO: do we need loanIndex here?
+            (err, , shortfall) = getAccountLiquidityInternal(borrower);
+            if (err != Error.NO_ERROR) {
+                return uint(err);
+            }
+            if (shortfall == 0) {
+                return uint(Error.INSUFFICIENT_SHORTFALL);
+            }
         }
 
         /* The liquidator may not repay more than what is allowed by the closeFactor */
-        uint borrowBalance = CToken(cTokenBorrowed).borrowBalanceStored(borrower);
-        (MathError mathErr, uint maxClose) = mulScalarTruncate(Exp({mantissa: closeFactorMantissa}), borrowBalance);
+        /* closeFactor increases over time after the term deadline */
+        uint borrowBalance = CToken(cTokenBorrowed).borrowBalanceStored(borrower, loanIndex);
+        (MathError mathErr, uint maxClose) = getMaxClose(borrowBalance, timeOverDeadline, shortfall);
         if (mathErr != MathError.NO_ERROR) {
             return uint(Error.MATH_ERROR);
         }
@@ -498,6 +522,24 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
         return uint(Error.NO_ERROR);
     }
 
+    function getMaxClose(uint borrowBalance, uint timeOverDeadline, uint shortfall) internal view returns (MathError, uint) {
+        // loan is not overdue or loan is underwater due to insufficient collateral
+        if (timeOverDeadline == 0 || shortfall > 0) {
+          return mulScalarTruncate(Exp({mantissa: closeFactorMantissa}), borrowBalance);
+        } else {
+          // TODO: safe math here
+          // TODO: timeFactorScale, maxTimeFactor
+          uint timeFactorScale = 1;
+          uint maxTimeFactor = 1;
+          uint timeFactor = max(timeOverDeadline * timeFactorScale, maxTimeFactor);
+          (MathError mathErr, uint closeFactorWithTimeMantissa) = mulScalarTruncate(Exp({mantissa: closeFactorMantissa}), timeFactor);
+          if (mathErr != MathError.NO_ERROR) {
+              return (mathErr, 0);
+          }
+          return mulScalarTruncate(Exp({mantissa: closeFactorWithTimeMantissa}), borrowBalance);
+        }
+    }
+
     /**
      * @notice Validates liquidateBorrow and reverts on rejection. May emit logs.
      * @param cTokenBorrowed Asset which was borrowed by the borrower
@@ -505,6 +547,8 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
      * @param liquidator The address repaying the borrow and seizing the collateral
      * @param borrower The address of the borrower
      * @param actualRepayAmount The amount of underlying being repaid
+     * @param seizeTokens The amount of tokens to seize
+     * @param loanIndex Index of loan to verify
      */
     function liquidateBorrowVerify(
         address cTokenBorrowed,
@@ -512,7 +556,8 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
         address liquidator,
         address borrower,
         uint actualRepayAmount,
-        uint seizeTokens) external {
+        uint seizeTokens,
+        uint loanIndex) external {
         // Shh - currently unused
         cTokenBorrowed;
         cTokenCollateral;
@@ -520,6 +565,7 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
         borrower;
         actualRepayAmount;
         seizeTokens;
+        loanIndex;
 
         // Shh - we don't ever want this hook to be marked pure
         if (false) {
@@ -1081,26 +1127,9 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
         return state;
     }
 
-    function _become(Unitroller unitroller, uint compRate_, address[] memory compMarketsToAdd, address[] memory otherMarketsToAdd) public {
+    function _become(Unitroller unitroller) public {
         require(msg.sender == unitroller.admin(), "only unitroller admin can change brains");
         require(unitroller._acceptImplementation() == 0, "change not authorized");
-
-        ComptrollerG3(address(unitroller))._becomeG3(compRate_, compMarketsToAdd, otherMarketsToAdd);
-    }
-
-    function _becomeG3(uint compRate_, address[] memory compMarketsToAdd, address[] memory otherMarketsToAdd) public {
-        require(msg.sender == comptrollerImplementation, "only brains can become itself");
-
-        for (uint i = 0; i < compMarketsToAdd.length; i++) {
-            _addMarketInternal(address(compMarketsToAdd[i]));
-        }
-
-        for (uint i = 0; i < otherMarketsToAdd.length; i++) {
-            _addMarketInternal(address(otherMarketsToAdd[i]));
-        }
-
-        _setCompRate(compRate_);
-        _addCompMarkets(compMarketsToAdd);
     }
 
     /**
@@ -1116,6 +1145,11 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
      * @notice Recalculate and update COMP speeds for all COMP markets
      */
     function refreshCompSpeeds() public {
+        require(msg.sender == tx.origin, "only externally owned accounts may refresh speeds");
+        refreshCompSpeedsInternal();
+    }
+
+    function refreshCompSpeedsInternal() internal {
         CToken[] memory allMarkets_ = allMarkets;
 
         for (uint i = 0; i < allMarkets_.length; i++) {
@@ -1131,8 +1165,7 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
             CToken cToken = allMarkets_[i];
             if (markets[address(cToken)].isComped) {
                 Exp memory assetPrice = Exp({mantissa: oracle.getUnderlyingPrice(cToken)});
-                Exp memory interestPerBlock = mul_(Exp({mantissa: cToken.borrowRatePerBlock()}), cToken.totalBorrows());
-                Exp memory utility = mul_(interestPerBlock, assetPrice);
+                Exp memory utility = mul_(assetPrice, cToken.totalBorrows());
                 utilities[i] = utility;
                 totalUtility = add_(totalUtility, utility);
             }
@@ -1315,7 +1348,7 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
         compRate = compRate_;
         emit NewCompRate(oldRate, compRate_);
 
-        refreshCompSpeeds();
+        refreshCompSpeedsInternal();
     }
 
     /**
@@ -1329,7 +1362,7 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
             _addCompMarketInternal(cTokens[i]);
         }
 
-        refreshCompSpeeds();
+        refreshCompSpeedsInternal();
     }
 
     function _addCompMarketInternal(address cToken) internal {
@@ -1368,7 +1401,7 @@ contract ComptrollerG3 is ComptrollerV3Storage, ComptrollerInterface, Comptrolle
         market.isComped = false;
         emit MarketComped(CToken(cToken), false);
 
-        refreshCompSpeeds();
+        refreshCompSpeedsInternal();
     }
 
     /**
