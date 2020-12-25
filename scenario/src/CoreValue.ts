@@ -27,7 +27,9 @@ import { erc20Fetchers, getErc20Value } from './Value/Erc20Value';
 import { mcdFetchers, getMCDValue } from './Value/MCDValue';
 import { getInterestRateModelValue, interestRateModelFetchers } from './Value/InterestRateModelValue';
 import { getPriceOracleValue, priceOracleFetchers } from './Value/PriceOracleValue';
+import { getPriceOracleWithTermLoansValue, priceOracleWithTermLoansFetchers } from './Value/PriceOracleWithTermLoansValue';
 import { getPriceOracleProxyValue, priceOracleProxyFetchers } from './Value/PriceOracleProxyValue';
+import { getPriceOracleWithTermLoansProxyValue, priceOracleWithTermLoansProxyFetchers } from './Value/PriceOracleWithTermLoansProxyValue';
 import { getAnchoredViewValue, anchoredViewFetchers } from './Value/AnchoredViewValue';
 import { getTimelockValue, timelockFetchers, getTimelockAddress } from './Value/TimelockValue';
 import { getMaximillionValue, maximillionFetchers } from './Value/MaximillionValue';
@@ -910,6 +912,28 @@ const fetchers = [
     [new Arg('res', getPriceOracleProxyValue, { variadic: true })],
     async (world, { res }) => res,
     { subExpressions: priceOracleProxyFetchers() }
+  ),
+  new Fetcher<{ res: Value }, Value>(
+    `
+      #### PriceOracleWithTermLoans
+
+      * "PriceOracleWithTermLoans ...priceOracleArgs" - Returns PriceOracleWithTermLoans value
+    `,
+    'PriceOracleWithTermLoans',
+    [new Arg('res', getPriceOracleWithTermLoansValue, { variadic: true })],
+    async (world, { res }) => res,
+    { subExpressions: priceOracleWithTermLoansFetchers() }
+  ),
+  new Fetcher<{ res: Value }, Value>(
+    `
+      #### PriceOracleWithTermLoansProxy
+
+      * "PriceOracleWithTermLoansProxy ...priceOracleWithTermLoansProxyArgs" - Returns PriceOracleWithTermLoansProxy value
+    `,
+    'PriceOracleWithTermLoansProxy',
+    [new Arg('res', getPriceOracleWithTermLoansProxyValue, { variadic: true })],
+    async (world, { res }) => res,
+    { subExpressions: priceOracleWithTermLoansProxyFetchers() }
   ),
   new Fetcher<{ res: Value }, Value>(
     `

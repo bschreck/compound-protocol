@@ -1,15 +1,15 @@
 pragma solidity ^0.5.16;
 
-import "../../contracts/PriceOracleWithTermLoans.sol";
+import "../../contracts/PriceOracle.sol";
 
-contract FixedPriceOracleWithTermLoans is PriceOracleWithTermLoans {
+contract FixedPriceOracle is PriceOracle {
     uint public price;
 
     constructor(uint _price) public {
         price = _price;
     }
 
-    function getUnderlyingPrice(CTokenWithTermLoans cToken) public view returns (uint) {
+    function getUnderlyingPrice(CToken cToken) public view returns (uint) {
         cToken;
         return price;
     }

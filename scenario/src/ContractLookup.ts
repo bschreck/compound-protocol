@@ -14,6 +14,7 @@ import { Governor } from './Contract/Governor';
 import { Erc20 } from './Contract/Erc20';
 import { InterestRateModel } from './Contract/InterestRateModel';
 import { PriceOracle } from './Contract/PriceOracle';
+import { PriceOracleWithTermLoans } from './Contract/PriceOracleWithTermLoans';
 import { Timelock } from './Contract/Timelock';
 import { AnchoredView } from './Contract/AnchoredView';
 
@@ -113,12 +114,20 @@ export async function getPriceOracleProxy(world: World): Promise<PriceOracle> {
   return getWorldContract(world, [['Contracts', 'PriceOracleProxy']]);
 }
 
+export async function getPriceOracleWithTermLoansProxy(world: World): Promise<PriceOracleWithTermLoans> {
+  return getWorldContract(world, [['Contracts', 'PriceOracleWithTermLoansProxy']]);
+}
+
 export async function getAnchoredView(world: World): Promise<AnchoredView> {
   return getWorldContract(world, [['Contracts', 'AnchoredView']]);
 }
 
 export async function getPriceOracle(world: World): Promise<PriceOracle> {
   return getWorldContract(world, [['Contracts', 'PriceOracle']]);
+}
+
+export async function getPriceOracleWithTermLoans(world: World): Promise<PriceOracleWithTermLoans> {
+  return getWorldContract(world, [['Contracts', 'PriceOracleWithTermLoans']]);
 }
 
 export async function getComp(

@@ -21,6 +21,8 @@ import { erc20Commands, processErc20Event } from './Event/Erc20Event';
 import { interestRateModelCommands, processInterestRateModelEvent } from './Event/InterestRateModelEvent';
 import { priceOracleCommands, processPriceOracleEvent } from './Event/PriceOracleEvent';
 import { priceOracleProxyCommands, processPriceOracleProxyEvent } from './Event/PriceOracleProxyEvent';
+import { priceOracleWithTermLoansCommands, processPriceOracleWithTermLoansEvent } from './Event/PriceOracleWithTermLoansEvent';
+import { priceOracleWithTermLoansProxyCommands, processPriceOracleWithTermLoansProxyEvent } from './Event/PriceOracleWIthTermLoansProxyEvent';
 import { maximillionCommands, processMaximillionEvent } from './Event/MaximillionEvent';
 import { invariantCommands, processInvariantEvent } from './Event/InvariantEvent';
 import { expectationCommands, processExpectationEvent } from './Event/ExpectationEvent';
@@ -749,6 +751,33 @@ export const commands: (View<any> | ((world: World) => Promise<View<any>>))[] = 
     { subExpressions: priceOracleProxyCommands() }
   ),
 
+  new Command<{ event: EventV }>(
+    `
+      #### PriceOracleWithTermLoans
+
+      * "PriceOracleWithTermLoans ...event" - Runs given Price Oracle event
+        * E.g. "PriceOracleWithTermLoans SetPrice cZRX 1.5"
+    `,
+    'PriceOracleWithTermLoans',
+    [new Arg('event', getEventV, { variadic: true })],
+    (world, from, { event }) => processPriceOracleWithTermLoansEvent(world, event.val, from),
+    { subExpressions: priceOracleWithTermLoansCommands() }
+  ),
+
+  new Command<{ event: EventV }>(
+    `
+      #### PriceOracleWithTermLoansProxy
+
+      * "PriceOracleWithTermLoansProxy ...event" - Runs given Price Oracle event
+      * E.g. "PriceOracleWithTermLoansProxy Deploy (Unitroller Address) (PriceOracleWithTermLoans Address) (CToken cETH Address)"
+    `,
+    'PriceOracleWithTermLoansProxy',
+    [new Arg('event', getEventV, { variadic: true })],
+    (world, from, { event }) => {
+      return processPriceOracleWithTermLoansProxyEvent(world, event.val, from);
+    },
+    { subExpressions: priceOracleWithTermLoansProxyCommands() }
+  ),
   new Command<{ event: EventV }>(
     `
       #### Maximillion
