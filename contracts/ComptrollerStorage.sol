@@ -138,6 +138,14 @@ contract ComptrollerV4Storage is ComptrollerV3Storage {
     mapping(address => uint) public borrowCaps;
 }
 
+contract ComptrollerV5Storage is ComptrollerV4Storage {
+    /// @notice The portion of COMP that each contributor receives per block
+    mapping(address => uint) public compContributorSpeeds;
+
+    /// @notice Last block at which a contributor's COMP rewards have been allocated
+    mapping(address => uint) public lastContributorBlock;
+}
+
 contract ComptrollerV6Storage is ComptrollerV5Storage {
     /**
      * @notice Oracle which gives the price of any given asset

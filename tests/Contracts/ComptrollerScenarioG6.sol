@@ -1,12 +1,13 @@
 pragma solidity ^0.5.16;
 
-import "../../contracts/ComptrollerG5.sol";
+import "../../contracts/ComptrollerG6.sol";
 
-contract ComptrollerScenarioG5 is ComptrollerG5 {
+contract ComptrollerScenarioG6 is ComptrollerG6 {
     uint public blockNumber;
+
     address public compAddress;
 
-    constructor() ComptrollerG5() public {}
+    constructor() ComptrollerG6() public {}
 
     function setCompAddress(address compAddress_) public {
         compAddress = compAddress_;
@@ -16,7 +17,7 @@ contract ComptrollerScenarioG5 is ComptrollerG5 {
         return compAddress;
     }
 
-    function membershipLength(CToken cToken) public view returns (uint) {
+    function membershipLength(CTokenWithTermLoans cToken) public view returns (uint) {
         return accountAssets[address(cToken)].length;
     }
 
@@ -29,6 +30,7 @@ contract ComptrollerScenarioG5 is ComptrollerG5 {
     function setBlockNumber(uint number) public {
         blockNumber = number;
     }
+
 
     function getBlockNumber() public view returns (uint) {
         return blockNumber;
@@ -53,7 +55,7 @@ contract ComptrollerScenarioG5 is ComptrollerG5 {
         return compMarkets;
     }
 
-    function unlist(CToken cToken) public {
+    function unlist(CTokenWithTermLoans cToken) public {
         markets[address(cToken)].isListed = false;
     }
 }
