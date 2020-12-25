@@ -13,7 +13,7 @@ import "./Governance/Comp.sol";
  * @title Comptroller With Term Loans Contract
  * @author Ben Schreck
  */
-contract ComptrollerG5 is ComptrollerV5Storage, ComptrollerWithTermLoansInterface, ComptrollerErrorReporter, Exponential {
+contract ComptrollerG6 is ComptrollerV6Storage, ComptrollerWithTermLoansInterface, ComptrollerErrorReporter, Exponential {
     /// @notice Emitted when an admin supports a market
     event MarketListed(CTokenWithTermLoans cToken);
 

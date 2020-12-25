@@ -138,7 +138,7 @@ contract ComptrollerV4Storage is ComptrollerV3Storage {
     mapping(address => uint) public borrowCaps;
 }
 
-contract ComptrollerV5Storage is ComptrollerV4Storage {
+contract ComptrollerV6Storage is ComptrollerV5Storage {
     /**
      * @notice Oracle which gives the price of any given asset
      */
