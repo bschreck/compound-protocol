@@ -22,7 +22,9 @@ import { comptrollerFetchers, getComptrollerValue } from './Value/ComptrollerVal
 import { comptrollerImplFetchers, getComptrollerImplValue } from './Value/ComptrollerImplValue';
 import { getUnitrollerValue, unitrollerFetchers } from './Value/UnitrollerValue';
 import { cTokenFetchers, getCTokenValue } from './Value/CTokenValue';
+import { cTokenWithTermLoansFetchers, getCTokenWithTermLoansValue } from './Value/CTokenWithTermLoansValue';
 import { cTokenDelegateFetchers, getCTokenDelegateValue } from './Value/CTokenDelegateValue';
+import { cTokenWithTermLoansDelegateFetchers, getCTokenWithTermLoansDelegateValue } from './Value/CTokenWithTermLoansDelegateValue';
 import { erc20Fetchers, getErc20Value } from './Value/Erc20Value';
 import { mcdFetchers, getMCDValue } from './Value/MCDValue';
 import { getInterestRateModelValue, interestRateModelFetchers } from './Value/InterestRateModelValue';
@@ -33,6 +35,7 @@ import { getPriceOracleWithTermLoansProxyValue, priceOracleWithTermLoansProxyFet
 import { getAnchoredViewValue, anchoredViewFetchers } from './Value/AnchoredViewValue';
 import { getTimelockValue, timelockFetchers, getTimelockAddress } from './Value/TimelockValue';
 import { getMaximillionValue, maximillionFetchers } from './Value/MaximillionValue';
+import { getMaximillionWithTermLoansValue, maximillionWithTermLoansFetchers } from './Value/MaximillionWithTermLoansValue';
 import { getCompValue, compFetchers } from './Value/CompValue';
 import { getGovernorValue, governorFetchers } from './Value/GovernorValue';
 import { getAddress } from './ContractLookup';
@@ -860,6 +863,17 @@ const fetchers = [
   ),
   new Fetcher<{ res: Value }, Value>(
     `
+      #### CTokenWithTermLoans
+
+      * "CTokenWithTermLoans ...cTokenArgs" - Returns cTokensWithTermLoans value
+    `,
+    'CTokenWithTermLoans',
+    [new Arg('res', getCTokenWithTermLoansValue, { variadic: true })],
+    async (world, { res }) => res,
+    { subExpressions: cTokenWithTermLoansFetchers() }
+  ),
+  new Fetcher<{ res: Value }, Value>(
+    `
       #### CTokenDelegate
 
       * "CTokenDelegate ...cTokenDelegateArgs" - Returns cToken delegate value
@@ -868,6 +882,17 @@ const fetchers = [
     [new Arg('res', getCTokenDelegateValue, { variadic: true })],
     async (world, { res }) => res,
     { subExpressions: cTokenDelegateFetchers() }
+  ),
+  new Fetcher<{ res: Value }, Value>(
+    `
+      #### CTokenWithTermLoansDelegate
+
+      * "CTokenWithTermLoansDelegate ...cTokenDelegateArgs" - Returns cToken delegate value
+    `,
+    'CTokenWithTermLoansDelegate',
+    [new Arg('res', getCTokenWithTermLoansDelegateValue, { variadic: true })],
+    async (world, { res }) => res,
+    { subExpressions: cTokenWithTermLoansDelegateFetchers() }
   ),
   new Fetcher<{ res: Value }, Value>(
     `
@@ -967,6 +992,17 @@ const fetchers = [
     [new Arg('res', getMaximillionValue, { variadic: true })],
     async (world, { res }) => res,
     { subExpressions: maximillionFetchers() }
+  ),
+  new Fetcher<{ res: Value }, Value>(
+    `
+      #### MaximillionWithTermLoans
+
+      * "MaximillionWithTermLoans ...maximillionArgs" - Returns MaximillionWithTermLoans value
+    `,
+    'MaximillionWithTermLoans',
+    [new Arg('res', getMaximillionWithTermLoansValue, { variadic: true })],
+    async (world, { res }) => res,
+    { subExpressions: maximillionWithTermLoansFetchers() }
   ),
   new Fetcher<{ res: Value }, Value>(
     `

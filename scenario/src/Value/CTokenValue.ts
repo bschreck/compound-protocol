@@ -1,6 +1,7 @@
 import { Event } from '../Event';
 import { World } from '../World';
 import { CToken } from '../Contract/CToken';
+import { CTokenWithTermLoans } from '../Contract/CTokenWithTermLoans';
 import { CErc20Delegator } from '../Contract/CErc20Delegator';
 import { Erc20 } from '../Contract/Erc20';
 import {
@@ -28,6 +29,30 @@ export async function getCTokenV(world: World, event: Event): Promise<CToken> {
   );
 
   return getWorldContractByAddress<CToken>(world, address.val);
+}
+
+export async function getCTokenWithTermLoansV(world: World, event: Event): Promise<CTokenWithTermLoans> {
+  const address = await mapValue<AddressV>(
+    world,
+    event,
+    (str) => new AddressV(getCTokenAddress(world, str)),
+    getCoreValue,
+    AddressV
+  );
+
+  return getWorldContractByAddress<CTokenWithTermLoans>(world, address.val);
+}
+
+export async function getCTokenOrCTokenWithTermLoansV(world: World, event: Event): Promise<CToken | CTokenWithTermLoans> {
+  const address = await mapValue<AddressV>(
+    world,
+    event,
+    (str) => new AddressV(getCTokenAddress(world, str)),
+    getCoreValue,
+    AddressV
+  );
+
+  return getWorldContractByAddress<CToken | CTokenWithTermLoans>(world, address.val);
 }
 
 export async function getCErc20DelegatorV(world: World, event: Event): Promise<CErc20Delegator> {

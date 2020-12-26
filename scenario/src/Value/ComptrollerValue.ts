@@ -2,6 +2,7 @@ import {Event} from '../Event';
 import {World} from '../World';
 import {Comptroller} from '../Contract/Comptroller';
 import {CToken} from '../Contract/CToken';
+import {CTokenWithTermLoans} from '../Contract/CTokenWithTermLoans';
 import {
   getAddressV,
   getCoreValue,
@@ -74,7 +75,7 @@ async function getPendingAdmin(world: World, comptroller: Comptroller): Promise<
   return new AddressV(await comptroller.methods.pendingAdmin().call());
 }
 
-async function getCollateralFactor(world: World, comptroller: Comptroller, cToken: CToken): Promise<NumberV> {
+async function getCollateralFactor(world: World, comptroller: Comptroller, cToken: CToken | CTokenWithTermLoans): Promise<NumberV> {
   let {0: _isListed, 1: collateralFactorMantissa} = await comptroller.methods.markets(cToken._address).call();
   return new NumberV(collateralFactorMantissa, 1e18);
 }
@@ -83,7 +84,7 @@ async function membershipLength(world: World, comptroller: Comptroller, user: st
   return new NumberV(await comptroller.methods.membershipLength(user).call());
 }
 
-async function checkMembership(world: World, comptroller: Comptroller, user: string, cToken: CToken): Promise<BoolV> {
+async function checkMembership(world: World, comptroller: Comptroller, user: string, cToken: CToken | CTokenWithTermLoans): Promise<BoolV> {
   return new BoolV(await comptroller.methods.checkMembership(user, cToken._address).call());
 }
 
@@ -99,13 +100,13 @@ async function getCompMarkets(world: World, comptroller: Comptroller): Promise<L
   return new ListV(mkts.map((a) => new AddressV(a)));
 }
 
-async function checkListed(world: World, comptroller: Comptroller, cToken: CToken): Promise<BoolV> {
+async function checkListed(world: World, comptroller: Comptroller, cToken: CToken | CTokenWithTermLoans): Promise<BoolV> {
   let {0: isListed, 1: _collateralFactorMantissa} = await comptroller.methods.markets(cToken._address).call();
 
   return new BoolV(isListed);
 }
 
-async function checkIsComped(world: World, comptroller: Comptroller, cToken: CToken): Promise<BoolV> {
+async function checkIsComped(world: World, comptroller: Comptroller, cToken: CToken | CTokenWithTermLoans): Promise<BoolV> {
   let {0: isListed, 1: _collateralFactorMantissa, 2: isComped} = await comptroller.methods.markets(cToken._address).call();
   return new BoolV(isComped);
 }
@@ -135,7 +136,7 @@ export function comptrollerFetchers() {
       ],
       (world, {comptroller, account}) => getLiquidity(world, comptroller, account.val)
     ),
-    new Fetcher<{comptroller: Comptroller, account: AddressV, action: StringV, amount: NumberV, cToken: CToken}, NumberV>(`
+    new Fetcher<{comptroller: Comptroller, account: AddressV, action: StringV, amount: NumberV, cToken: CToken | CTokenWithTermLoans}, NumberV>(`
         #### Hypothetical
 
         * "Comptroller Hypothetical <User> <Action> <Asset> <Number>" - Returns a given user's trued up liquidity given a hypothetical change in asset with redeeming a certain number of tokens and/or borrowing a given amount.
@@ -252,7 +253,7 @@ export function comptrollerFetchers() {
       [new Arg("comptroller", getComptroller, {implicit: true})],
       (world, {comptroller}) => getBlockNumber(world, comptroller)
     ),
-    new Fetcher<{comptroller: Comptroller, cToken: CToken}, NumberV>(`
+    new Fetcher<{comptroller: Comptroller, cToken: CToken | CTokenWithTermLoans}, NumberV>(`
         #### CollateralFactor
 
         * "Comptroller CollateralFactor <CToken>" - Returns the collateralFactor associated with a given asset
@@ -278,7 +279,7 @@ export function comptrollerFetchers() {
       ],
       (world, {comptroller, account}) => membershipLength(world, comptroller, account.val)
     ),
-    new Fetcher<{comptroller: Comptroller, account: AddressV, cToken: CToken}, BoolV>(`
+    new Fetcher<{comptroller: Comptroller, account: AddressV, cToken: CToken | CTokenWithTermLoans}, BoolV>(`
         #### CheckMembership
 
         * "Comptroller CheckMembership <User> <CToken>" - Returns one if user is in asset, zero otherwise.
@@ -305,7 +306,7 @@ export function comptrollerFetchers() {
       ],
       (world, {comptroller, account}) => getAssetsIn(world, comptroller, account.val)
     ),
-    new Fetcher<{comptroller: Comptroller, cToken: CToken}, BoolV>(`
+    new Fetcher<{comptroller: Comptroller, cToken: CToken | CTokenWithTermLoans}, BoolV>(`
         #### CheckListed
 
         * "Comptroller CheckListed <CToken>" - Returns true if market is listed, false otherwise.
@@ -318,7 +319,7 @@ export function comptrollerFetchers() {
       ],
       (world, {comptroller, cToken}) => checkListed(world, comptroller, cToken)
     ),
-    new Fetcher<{comptroller: Comptroller, cToken: CToken}, BoolV>(`
+    new Fetcher<{comptroller: Comptroller, cToken: CToken | CTokenWithTermLoans}, BoolV>(`
         #### CheckIsComped
 
         * "Comptroller CheckIsComped <CToken>" - Returns true if market is listed, false otherwise.
@@ -386,7 +387,7 @@ export function comptrollerFetchers() {
         async (world, {comptroller}) => new BoolV(await comptroller.methods.seizeGuardianPaused().call())
     ),
 
-    new Fetcher<{comptroller: Comptroller, cToken: CToken}, BoolV>(`
+    new Fetcher<{comptroller: Comptroller, cToken: CToken | CTokenWithTermLoans}, BoolV>(`
         #### MintGuardianMarketPaused
 
         * "MintGuardianMarketPaused" - Returns the Comptrollers's Mint paused status in market
@@ -399,7 +400,7 @@ export function comptrollerFetchers() {
         ],
         async (world, {comptroller, cToken}) => new BoolV(await comptroller.methods.mintGuardianPaused(cToken._address).call())
     ),
-    new Fetcher<{comptroller: Comptroller, cToken: CToken}, BoolV>(`
+    new Fetcher<{comptroller: Comptroller, cToken: CToken | CTokenWithTermLoans}, BoolV>(`
         #### BorrowGuardianMarketPaused
 
         * "BorrowGuardianMarketPaused" - Returns the Comptrollers's Borrow paused status in market
@@ -457,7 +458,7 @@ export function comptrollerFetchers() {
         return new NumberV(resNum);
       }
     ),
-    new Fetcher<{comptroller: Comptroller, CToken: CToken, key: StringV}, NumberV>(`
+    new Fetcher<{comptroller: Comptroller, CToken: CToken | CTokenWithTermLoans, key: StringV}, NumberV>(`
         #### CompSupplyState(address)
 
         * "Comptroller CompBorrowState cZRX "index"
@@ -473,7 +474,7 @@ export function comptrollerFetchers() {
         return new NumberV(result[key.val]);
       }
     ),
-    new Fetcher<{comptroller: Comptroller, CToken: CToken, key: StringV}, NumberV>(`
+    new Fetcher<{comptroller: Comptroller, CToken: CToken | CTokenWithTermLoans, key: StringV}, NumberV>(`
         #### CompBorrowState(address)
 
         * "Comptroller CompBorrowState cZRX "index"
@@ -504,7 +505,7 @@ export function comptrollerFetchers() {
         return new NumberV(result);
       }
     ),
-    new Fetcher<{comptroller: Comptroller, CToken: CToken, account: AddressV}, NumberV>(`
+    new Fetcher<{comptroller: Comptroller, CToken: CToken | CTokenWithTermLoans, account: AddressV}, NumberV>(`
         #### compSupplierIndex
 
         * "Comptroller CompSupplierIndex cZRX Coburn
@@ -519,7 +520,7 @@ export function comptrollerFetchers() {
         return new NumberV(await comptroller.methods.compSupplierIndex(CToken._address, account.val).call());
       }
     ),
-    new Fetcher<{comptroller: Comptroller, CToken: CToken, account: AddressV}, NumberV>(`
+    new Fetcher<{comptroller: Comptroller, CToken: CToken | CTokenWithTermLoans, account: AddressV}, NumberV>(`
         #### CompBorrowerIndex
 
         * "Comptroller CompBorrowerIndex cZRX Coburn
@@ -534,7 +535,7 @@ export function comptrollerFetchers() {
         return new NumberV(await comptroller.methods.compBorrowerIndex(CToken._address, account.val).call());
       }
     ),
-    new Fetcher<{comptroller: Comptroller, CToken: CToken}, NumberV>(`
+    new Fetcher<{comptroller: Comptroller, CToken: CToken | CTokenWithTermLoans}, NumberV>(`
         #### CompSpeed
 
         * "Comptroller CompSpeed cZRX
@@ -560,7 +561,7 @@ export function comptrollerFetchers() {
         ],
         async (world, {comptroller}) => new AddressV(await comptroller.methods.borrowCapGuardian().call())
     ),
-    new Fetcher<{comptroller: Comptroller, CToken: CToken}, NumberV>(`
+    new Fetcher<{comptroller: Comptroller, CToken: CToken | CTokenWithTermLoans}, NumberV>(`
         #### BorrowCaps
 
         * "Comptroller BorrowCaps cZRX

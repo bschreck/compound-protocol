@@ -23,6 +23,9 @@ const ComptrollerScenarioG4Contract = getContract('ComptrollerScenarioG4');
 const ComptrollerG5Contract = getContract('ComptrollerG5');
 const ComptrollerScenarioG5Contract = getContract('ComptrollerScenarioG5');
 
+const ComptrollerG6Contract = getContract('ComptrollerG6');
+const ComptrollerScenarioG6Contract = getContract('ComptrollerScenarioG6');
+
 const ComptrollerScenarioContract = getTestContract('ComptrollerScenario');
 const ComptrollerContract = getContract('Comptroller');
 
@@ -126,6 +129,22 @@ export async function buildComptrollerImpl(
 
     new Fetcher<{ name: StringV }, ComptrollerImplData>(
       `
+        #### ScenarioG6
+        * "ScenarioG6 name:<String>" - The Comptroller Scenario for local testing (G6)
+          * E.g. "ComptrollerImpl Deploy ScenarioG6 MyScen"
+      `,
+      'ScenarioG6',
+      [new Arg('name', getStringV)],
+      async (world, { name }) => ({
+        invokation: await ComptrollerScenarioG6Contract.deploy<ComptrollerImpl>(world, from, []),
+        name: name.val,
+        contract: 'ComptrollerScenarioG6Contract',
+        description: 'ScenarioG6 Comptroller Impl'
+      })
+    ),
+
+    new Fetcher<{ name: StringV }, ComptrollerImplData>(
+      `
         #### Scenario
 
         * "Scenario name:<String>" - The Comptroller Scenario for local testing
@@ -216,7 +235,7 @@ export async function buildComptrollerImpl(
         };
       }
     ),
-  
+
     new Fetcher<{ name: StringV }, ComptrollerImplData>(
       `
         #### StandardG5
@@ -237,19 +256,18 @@ export async function buildComptrollerImpl(
 
     new Fetcher<{ name: StringV }, ComptrollerImplData>(
       `
-        #### StandardG5
-
-        * "StandardG4 name:<String>" - The standard generation 5 Comptroller contract
-          * E.g. "Comptroller Deploy StandardG5 MyStandard"
+        #### StandardG6
+        * "StandardG6 name:<String>" - The standard generation 5 Comptroller contract
+          * E.g. "Comptroller Deploy StandardG6 MyStandard"
       `,
-      'StandardG5',
+      'StandardG6',
       [new Arg('name', getStringV)],
       async (world, { name }) => {
         return {
-          invokation: await ComptrollerG5Contract.deploy<ComptrollerImpl>(world, from, []),
+          invokation: await ComptrollerG6Contract.deploy<ComptrollerImpl>(world, from, []),
           name: name.val,
-          contract: 'ComptrollerG5',
-          description: 'StandardG5 Comptroller Impl'
+          contract: 'ComptrollerG6',
+          description: 'StandardG6 Comptroller Impl'
         };
       }
     ),

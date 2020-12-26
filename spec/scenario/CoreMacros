@@ -41,6 +41,10 @@ Macro NewComptroller price=1.0 closeFactor=0.1 maxAssets=20
     ComptrollerImpl Deploy ScenarioG5 ComptrollerG5
     Unitroller SetPendingImpl ComptrollerG5
     ComptrollerImpl ComptrollerG5 BecomeG5
+    --g6
+    ComptrollerImpl Deploy ScenarioG6 ComptrollerG6
+    Unitroller SetPendingImpl ComptrollerG6
+    ComptrollerImpl ComptrollerG6 BecomeG6
     --current
     ComptrollerImpl Deploy Scenario ComptrollerScen
     Unitroller SetPendingImpl ComptrollerScen
@@ -51,6 +55,12 @@ Macro NewCToken erc20 cToken borrowRate=0.000005 initialExchangeRate=2e9 decimal
     InterestRateModel Deploy Fixed StdInterest borrowRate -- Note: interest rate model probably shouldn't be global
     CTokenDelegate Deploy cTokenType cErc20Delegate
     CToken Deploy delegatorType cToken cToken (Erc20 erc20 Address) (Comptroller Address) (InterestRateModel StdInterest Address) initialExchangeRate decimals admin (CTokenDelegate cErc20Delegate Address) becomeImplementationData
+
+Macro NewCTokenWithTermLoans erc20 cToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 tokenType=Standard delegatorType=CErc20WithTermLoansDelegatorScenario cTokenType=CErc20WithTermLoansDelegateScenario admin=Admin becomeImplementationData="0x0"
+    Erc20 Deploy tokenType erc20 erc20
+    InterestRateModel Deploy Fixed StdInterest borrowRate -- Note: interest rate model probably shouldn't be global
+    CTokenWithTermLoansDelegate Deploy cTokenType cErc20Delegate
+    CTokenWithTermLoans Deploy delegatorType cToken cToken (Erc20 erc20 Address) (Comptroller Address) (InterestRateModel StdInterest Address) initialExchangeRate decimals admin (CTokenWithTermLoansDelegate cErc20Delegate Address) becomeImplementationData
 
 -- Same as NewCToken but does not deploy an ERC20. Used for special ERC20s that are initialized differently
 Macro NewCTokenBringERC20 erc20 cToken borrowRate=0.000005 initialExchangeRate=2e9 decimals=8 delegatorType=CErc20DelegatorScenario cTokenType=CErc20DelegateScenario admin=Admin becomeImplementationData="0x0"

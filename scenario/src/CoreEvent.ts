@@ -16,7 +16,9 @@ import { comptrollerCommands, processComptrollerEvent } from './Event/Comptrolle
 import { processUnitrollerEvent, unitrollerCommands } from './Event/UnitrollerEvent';
 import { comptrollerImplCommands, processComptrollerImplEvent } from './Event/ComptrollerImplEvent';
 import { cTokenCommands, processCTokenEvent } from './Event/CTokenEvent';
+import { cTokenWithTermLoansCommands, processCTokenWithTermLoansEvent } from './Event/CTokenWithTermLoansEvent';
 import { cTokenDelegateCommands, processCTokenDelegateEvent } from './Event/CTokenDelegateEvent';
+import { cTokenWithTermLoansDelegateCommands, processCTokenWithTermLoansDelegateEvent } from './Event/CTokenWithTermLoansDelegateEvent';
 import { erc20Commands, processErc20Event } from './Event/Erc20Event';
 import { interestRateModelCommands, processInterestRateModelEvent } from './Event/InterestRateModelEvent';
 import { priceOracleCommands, processPriceOracleEvent } from './Event/PriceOracleEvent';
@@ -24,6 +26,7 @@ import { priceOracleProxyCommands, processPriceOracleProxyEvent } from './Event/
 import { priceOracleWithTermLoansCommands, processPriceOracleWithTermLoansEvent } from './Event/PriceOracleWithTermLoansEvent';
 import { priceOracleWithTermLoansProxyCommands, processPriceOracleWithTermLoansProxyEvent } from './Event/PriceOracleWIthTermLoansProxyEvent';
 import { maximillionCommands, processMaximillionEvent } from './Event/MaximillionEvent';
+import { maximillionWithTermLoansCommands, processMaximillionWithTermLoansEvent } from './Event/MaximillionWithTermLoansEvent';
 import { invariantCommands, processInvariantEvent } from './Event/InvariantEvent';
 import { expectationCommands, processExpectationEvent } from './Event/ExpectationEvent';
 import { timelockCommands, processTimelockEvent } from './Event/TimelockEvent';
@@ -686,6 +689,19 @@ export const commands: (View<any> | ((world: World) => Promise<View<any>>))[] = 
 
   new Command<{ event: EventV }>(
     `
+      #### CTokenWithTermLoans
+
+      * "CTokenWithTermLoans ...event" - Runs given CTokenWithTermLoans event
+        * E.g. "CTokenWithTermLoans cZRX Mint 5e18"
+    `,
+    'CTokenWithTermLoans',
+    [new Arg('event', getEventV, { variadic: true })],
+    (world, from, { event }) => processCTokenWithTermLoansEvent(world, event.val, from),
+    { subExpressions: cTokenWithTermLoansCommands() }
+  ),
+
+  new Command<{ event: EventV }>(
+    `
       #### CTokenDelegate
 
       * "CTokenDelegate ...event" - Runs given CTokenDelegate event
@@ -695,6 +711,19 @@ export const commands: (View<any> | ((world: World) => Promise<View<any>>))[] = 
     [new Arg('event', getEventV, { variadic: true })],
     (world, from, { event }) => processCTokenDelegateEvent(world, event.val, from),
     { subExpressions: cTokenDelegateCommands() }
+  ),
+
+  new Command<{ event: EventV }>(
+    `
+      #### CTokenWithTermLoansDelegate
+
+      * "CTokenWithTermLoansDelegate ...event" - Runs given CTokenWithTermLoansDelegate event
+        * E.g. "CTokenWithTermLoansDelegate Deploy CDaiDelegate cDaiDelegate"
+    `,
+    'CTokenWithTermLoansDelegate',
+    [new Arg('event', getEventV, { variadic: true })],
+    (world, from, { event }) => processCTokenWithTermLoansDelegateEvent(world, event.val, from),
+    { subExpressions: cTokenWithTermLoansDelegateCommands() }
   ),
 
   new Command<{ event: EventV }>(
@@ -791,6 +820,21 @@ export const commands: (View<any> | ((world: World) => Promise<View<any>>))[] = 
       return processMaximillionEvent(world, event.val, from);
     },
     { subExpressions: maximillionCommands() }
+  ),
+
+  new Command<{ event: EventV }>(
+    `
+      #### MaximillionWithTermLoans
+
+      * "MaximillionWithTermLoans ...event" - Runs given MaximillionWithTermLoans event
+      * E.g. "MaximillionWithTermLoans Deploy (CToken cETH Address)"
+    `,
+    'MaximillionWithTermLoans',
+    [new Arg('event', getEventV, { variadic: true })],
+    (world, from, { event }) => {
+      return processMaximillionWithTermLoansEvent(world, event.val, from);
+    },
+    { subExpressions: maximillionWithTermLoansCommands() }
   ),
 
   new Command<{ event: EventV }>(
