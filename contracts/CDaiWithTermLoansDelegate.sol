@@ -1,6 +1,7 @@
 pragma solidity ^0.5.16;
 
 import "./CErc20WithTermLoansDelegate.sol";
+import "./CDaiDelegate.sol";
 
 /**
  * @title Compound's CDai Contract
@@ -177,32 +178,4 @@ contract CDaiWithTermLoansDelegate is CErc20WithTermLoansDelegate {
     function mul(uint x, uint y) internal pure returns (uint z) {
         require(y == 0 || (z = x * y) / y == x, "mul-overflow");
     }
-}
-
-/*** Maker Interfaces ***/
-
-interface PotLike {
-    function chi() external view returns (uint);
-    function pie(address) external view returns (uint);
-    function drip() external returns (uint);
-    function join(uint) external;
-    function exit(uint) external;
-}
-
-interface GemLike {
-    function approve(address, uint) external;
-    function balanceOf(address) external view returns (uint);
-    function transferFrom(address, address, uint) external returns (bool);
-}
-
-interface VatLike {
-    function dai(address) external view returns (uint);
-    function hope(address) external;
-}
-
-interface DaiJoinLike {
-    function vat() external returns (VatLike);
-    function dai() external returns (GemLike);
-    function join(address, uint) external payable;
-    function exit(address, uint) external;
 }

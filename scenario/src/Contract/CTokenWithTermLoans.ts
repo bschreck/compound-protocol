@@ -5,7 +5,8 @@ import { encodedNumber } from '../Encoding';
 export interface CTokenWithTermLoansMethods {
   _resignImplementation(): Sendable<void>;
   balanceOfUnderlying(address: string): Callable<number>;
-  borrowBalanceCurrent(address: string, loanIndex: number): Callable<string>;
+  borrowBalanceCurrent(address: string): Callable<string>;
+  borrowBalanceCurrentByLoanIndex(address: string, loanIndex: number): Callable<string>;
   borrowBalanceStored(address: string, loanIndex: number): Callable<string>;
   totalBorrows(): Callable<string>;
   totalBorrowsCurrent(): Callable<number>;

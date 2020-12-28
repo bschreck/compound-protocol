@@ -47,7 +47,7 @@ class ContractStub {
 
   async deploy<T>(world: World, from: string, args: any[]): Promise<Invokation<T>> {
     // XXXS Consider opts
-    // ( world.web3.currentProvider && typeof(world.web3.currentProvider) !== 'string' && world.web3.currentProvider.opts ) || 
+    // ( world.web3.currentProvider && typeof(world.web3.currentProvider) !== 'string' && world.web3.currentProvider.opts ) ||
     const opts = { from: from };
 
     let invokationOpts = world.getInvokationOpts(opts);

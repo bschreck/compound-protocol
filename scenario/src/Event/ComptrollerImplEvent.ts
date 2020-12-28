@@ -129,13 +129,10 @@ async function becomeG3(
   from: string,
   comptrollerImpl: ComptrollerImpl,
   unitroller: Unitroller,
-  compRate: encodedNumber,
-  compMarkets: string[],
-  otherMarkets: string[]
 ): Promise<World> {
   let invokation = await invoke(
     world,
-    comptrollerImpl.methods._become(unitroller._address, compRate, compMarkets, otherMarkets),
+    comptrollerImpl.methods._become(unitroller._address),
     from,
     ComptrollerErrorReporter
   );
@@ -174,6 +171,29 @@ async function becomeG4(
 }
 
 async function becomeG5(
+  world: World,
+  from: string,
+  comptrollerImpl: ComptrollerImpl,
+  unitroller: Unitroller
+): Promise<World> {
+  let invokation = await invoke(
+    world,
+    comptrollerImpl.methods._become(unitroller._address),
+    from,
+    ComptrollerErrorReporter
+  );
+
+  if (!world.dryRun) {
+    // Skip this specifically on dry runs since it's likely to crash due to a number of reasons
+    world = await mergeContractABI(world, 'Comptroller', unitroller, unitroller.name, comptrollerImpl.name);
+  }
+
+  world = addAction(world, `Become ${unitroller._address}'s Comptroller Impl`, invokation);
+
+  return world;
+}
+
+async function becomeG6(
   world: World,
   from: string,
   comptrollerImpl: ComptrollerImpl,
@@ -320,30 +340,24 @@ export function comptrollerImplCommands() {
     new Command<{
       unitroller: Unitroller;
       comptrollerImpl: ComptrollerImpl;
-      compRate: NumberV;
-      compMarkets: ArrayV<AddressV>;
-      otherMarkets: ArrayV<AddressV>;
     }>(
       `
         #### BecomeG3
 
-        * "ComptrollerImpl <Impl> BecomeG3 <Rate> <CompMarkets> <OtherMarkets>" - Become the comptroller, if possible.
-          * E.g. "ComptrollerImpl MyImpl BecomeG3 0.1e18 [cDAI, cETH, cUSDC]
+        * "ComptrollerImpl <Impl> BecomeG3 " - Become the comptroller, if possible.
+          * E.g. "ComptrollerImpl MyImpl BecomeG3
       `,
       'BecomeG3',
       [
         new Arg('unitroller', getUnitroller, { implicit: true }),
         new Arg('comptrollerImpl', getComptrollerImpl),
-        new Arg('compRate', getNumberV, { default: new NumberV(1e18) }),
-        new Arg('compMarkets', getArrayV(getAddressV),  {default: new ArrayV([]) }),
-        new Arg('otherMarkets', getArrayV(getAddressV), { default: new ArrayV([]) })
       ],
-      (world, from, { unitroller, comptrollerImpl, compRate, compMarkets, otherMarkets }) => {
-        return becomeG3(world, from, comptrollerImpl, unitroller, compRate.encode(), compMarkets.val.map(a => a.val), otherMarkets.val.map(a => a.val))
+      (world, from, { unitroller, comptrollerImpl}) => {
+        return becomeG3(world, from, comptrollerImpl, unitroller)
       },
       { namePos: 1 }
     ),
-  
+
     new Command<{
       unitroller: Unitroller;
       comptrollerImpl: ComptrollerImpl;
@@ -380,6 +394,26 @@ export function comptrollerImplCommands() {
       ],
       (world, from, { unitroller, comptrollerImpl }) => {
         return becomeG5(world, from, comptrollerImpl, unitroller)
+      },
+      { namePos: 1 }
+    ),
+
+    new Command<{
+      unitroller: Unitroller;
+      comptrollerImpl: ComptrollerImpl;
+    }>(
+      `
+        #### BecomeG6
+        * "ComptrollerImpl <Impl> BecomeG6" - Become the comptroller, if possible.
+          * E.g. "ComptrollerImpl MyImpl BecomeG6
+      `,
+      'BecomeG6',
+      [
+        new Arg('unitroller', getUnitroller, { implicit: true }),
+        new Arg('comptrollerImpl', getComptrollerImpl)
+      ],
+      (world, from, { unitroller, comptrollerImpl }) => {
+        return becomeG6(world, from, comptrollerImpl, unitroller)
       },
       { namePos: 1 }
     ),

@@ -348,6 +348,7 @@ contract ComptrollerG6 is ComptrollerV6Storage, ComptrollerWithTermLoansInterfac
      */
     function borrowAllowed(address cToken, address borrower, uint borrowAmount, uint loanIndex) external returns (uint) {
         // TODO: do we need loanIndex?
+        loanIndex;
         // Pausing is a very serious situation - we revert to sound the alarms
         require(!borrowGuardianPaused[cToken], "borrow is paused");
 
@@ -1476,4 +1477,75 @@ contract ComptrollerG6 is ComptrollerV6Storage, ComptrollerWithTermLoansInterfac
     function getCompAddress() public view returns (address) {
         return 0xc00e94Cb662C3520282E6f5717214004A7f26888;
     }
+
+    /**
+     * @notice Only included to allow compilation to succeed
+     */
+    function borrowAllowed(
+      address cToken,
+      address borrower,
+      uint borrowAmount) external returns (uint) {
+        cToken;
+        borrower;
+        borrowAmount;
+    }
+
+    function borrowVerify(
+      address cToken,
+      address borrower,
+      uint borrowAmount) external {
+        cToken;
+        borrower;
+        borrowAmount;
+    }
+
+    function repayBorrowAllowed(
+        address cToken,
+        address payer,
+        address borrower,
+        uint repayAmount) external returns (uint) {
+        cToken;
+        borrower;
+        payer;
+        repayAmount;
+        }
+    function repayBorrowVerify(
+        address cToken,
+        address payer,
+        address borrower,
+        uint repayAmount,
+        uint borrowerIndex) external {
+        cToken;
+        payer;
+        borrower;
+        repayAmount;
+        borrowerIndex;
+        }
+
+    function liquidateBorrowAllowed(
+        address cTokenBorrowed,
+        address cTokenCollateral,
+        address liquidator,
+        address borrower,
+        uint repayAmount) external returns (uint) {
+        cTokenBorrowed;
+        cTokenCollateral;
+        liquidator;
+        borrower;
+        repayAmount;
+        }
+    function liquidateBorrowVerify(
+        address cTokenBorrowed,
+        address cTokenCollateral,
+        address liquidator,
+        address borrower,
+        uint repayAmount,
+        uint seizeTokens) external {
+        cTokenBorrowed;
+        cTokenCollateral;
+        liquidator;
+        borrower;
+        repayAmount;
+        seizeTokens;
+        }
 }

@@ -312,13 +312,12 @@ contract CTokenWithTermLoans is CTokenWithTermLoansInterface, Exponential, Token
     /**
      * @notice Accrue interest to updated borrowIndex and then calculate account's borrow balance using the updated borrowIndex
      * @param account The address whose balance should be calculated after updating borrowIndex
-     * @param loanIndex Index of loan to get borrow balance of
      * @return The calculated balance
      */
-    function borrowBalanceCurrent(address account, uint loanIndex) external nonReentrant returns (uint) {
+    function borrowBalanceCurrent(address account) external nonReentrant returns (uint) {
         require(accrueInterest() == uint(Error.NO_ERROR), "accrue interest failed");
         return allBorrowBalanceStored(account);
-    } // MODIFIED
+    }
 
     /**
      * @notice Accrue interest to updated borrowIndex and then calculate account's borrow balance using the updated borrowIndex

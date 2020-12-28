@@ -63,8 +63,12 @@ async function balanceOfUnderlying(world: World, cToken: CTokenWithTermLoans, us
   return new NumberV(await cToken.methods.balanceOfUnderlying(user).call());
 }
 
-async function getBorrowBalance(world: World, cToken: CTokenWithTermLoans, user: string, loanIndex: number): Promise<NumberV> {
-  return new NumberV(await cToken.methods.borrowBalanceCurrent(user, loanIndex).call());
+async function getBorrowBalance(world: World, cToken: CTokenWithTermLoans, user: string): Promise<NumberV> {
+  return new NumberV(await cToken.methods.borrowBalanceCurrent(user).call());
+}
+
+async function getBorrowBalanceByLoanIndex(world: World, cToken: CTokenWithTermLoans, user: string, loanIndex: number): Promise<NumberV> {
+  return new NumberV(await cToken.methods.borrowBalanceCurrentByLoanIndex(user, loanIndex).call());
 }
 
 async function getBorrowBalanceStored(world: World, cToken: CTokenWithTermLoans, user: string, loanIndex: number): Promise<NumberV> {
@@ -199,9 +203,9 @@ export function cTokenWithTermLoansFetchers() {
     ),
 
     new Fetcher<{ cToken: CTokenWithTermLoans, address: AddressV, loanIndex: NumberV }, NumberV>(`
-        #### BorrowBalance
+        #### BorrowBalanceByLoanIndex
 
-        * "CTokenWithTermLoans <CTokenWithTermLoans> BorrowBalance <User> <loanIndex>" - Returns a user's borrow balance (including interest)
+        * "CTokenWithTermLoans <CTokenWithTermLoans> BorrowBalanceByLoanIndex <User> <loanIndex>" - Returns a user's borrow balance (including interest)
           * E.g. "CTokenWithTermLoans cZRX BorrowBalance Geoff 0"
       `,
       "BorrowBalance",
@@ -210,7 +214,22 @@ export function cTokenWithTermLoansFetchers() {
         new Arg("address", getAddressV),
         new Arg("loanIndex", getNumberV)
       ],
-      (world, { cToken, address, loanIndex }) => getBorrowBalance(world, cToken, address.val, loanIndex.val as number),
+      (world, { cToken, address, loanIndex }) => getBorrowBalanceByLoanIndex(world, cToken, address.val, loanIndex.val as number),
+      { namePos: 1 }
+    ),
+
+    new Fetcher<{ cToken: CTokenWithTermLoans, address: AddressV}, NumberV>(`
+        #### BorrowBalance
+
+        * "CTokenWithTermLoans <CTokenWithTermLoans> BorrowBalance <User>" - Returns a user's borrow balance (including interest)
+          * E.g. "CTokenWithTermLoans cZRX BorrowBalance Geoff"
+      `,
+      "BorrowBalance",
+      [
+        new Arg("cToken", getCTokenWithTermLoansV),
+        new Arg("address", getAddressV),
+      ],
+      (world, { cToken, address}) => getBorrowBalance(world, cToken, address.val),
       { namePos: 1 }
     ),
 

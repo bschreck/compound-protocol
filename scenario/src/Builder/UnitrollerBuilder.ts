@@ -34,15 +34,20 @@ export async function buildUnitroller(world: World, from: string, event: Event):
     )
   ];
 
+  console.log("1");
   let unitrollerData = await getFetcherValue<any, UnitrollerData>("DeployUnitroller", fetchers, world, event);
+  console.log("2");
   let invokation = unitrollerData.invokation;
   delete unitrollerData.invokation;
+  console.log("3");
 
   if (invokation.error) {
     throw invokation.error;
   }
   const unitroller = invokation.value!;
+  console.log("4");
   unitrollerData.address = unitroller._address;
+  console.log("5");
 
   world = await storeAndSaveContract(
     world,
@@ -53,6 +58,7 @@ export async function buildUnitroller(world: World, from: string, event: Event):
       { index: ['Unitroller'], data: unitrollerData }
     ]
   );
+  console.log("6");
 
   return {world, unitroller, unitrollerData};
 }
