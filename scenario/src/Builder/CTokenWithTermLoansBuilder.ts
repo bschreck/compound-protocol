@@ -399,6 +399,9 @@ export async function buildCTokenWithTermLoans(
     tokenData.symbol,
     invokation,
     [
+      // TODO: this adds CTokenWithTermLoans to the cTokens list which could get confusing.
+      // we could create a new list, but then would have to have Comptroller logic be a bit more complicated
+      // e.g. in Value/CTokenValue.ts, which would need two separate events for finding CTokenWithTermLoans vs CTokens
       { index: ['cTokens', tokenData.symbol], data: tokenData },
       { index: ['Tokens', tokenData.symbol], data: tokenData }
     ]

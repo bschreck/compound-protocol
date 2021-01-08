@@ -113,11 +113,17 @@ Macro Prep user amount erc20 token allowanceAmount=Nothing
 Macro Allow user token
     From user (Erc20 (CToken token Underlying) Approve token UInt256Max)
 
+Macro AllowWTL user token
+    From user (Erc20 (CTokenWithTermLoans token Underlying) Approve token UInt256Max)
+
 Macro AccrueInterest token
     CToken token AccrueInterest
 
 Macro Mint user amount token
     From user (CToken token Mint amount)
+
+Macro MintWTL user amount token
+    From user (CTokenWithTermLoans token Mint amount)
 
 Macro SendMintEth user amount token
     From user (Trx GasPrice 0 (Trx Value amount (Send token amount)))
@@ -143,29 +149,53 @@ Macro BorrowEth user amount token
 Macro Borrow user amount token
     From user (CToken token Borrow amount)
 
-Macro RepayBorrow user amount token
-    From user (CToken token RepayBorrow amount)
+Macro BorrowWTL user amount token deadline
+    From user (CTokenWithTermLoans token Borrow amount deadline)
+
+Macro RepayBorrowWTL user amount loanIndex token
+    From user (CTokenWithTermLoans token RepayBorrow amount loanIndex)
 
 Macro RepayBorrowEth user amount token
     From user (Trx GasPrice 0 (Trx Value amount (CToken token RepayBorrow)))
 
+Macro RepayBorrowEthWTL user amount loanIndex token
+    From user (Trx GasPrice 0 (Trx Value amount (CTokenWithTermLoans token RepayBorrow loanIndex)))
+
 Macro RepayBorrowEthMax user amount token
     From user (Trx GasPrice 0 (Trx Value amount (Maximillion RepayBehalf user)))
+
+Macro RepayBorrowEthMaxWTL user amount loanIndex token
+    From user (Trx GasPrice 0 (Trx Value amount (MaximillionWithTermLoans RepayBehalf user loanIndex)))
 
 Macro RepayBorrowBehalf user behalf amount token
     From user (CToken token RepayBorrowBehalf behalf amount)
 
+Macro RepayBorrowBehalfWTL user behalf amount loanIndex token
+    From user (CTokenWithTermLoans token RepayBorrowBehalf behalf amount loanIndex)
+
 Macro RepayBorrowEthBehalf user behalf amount token
     From user (Trx GasPrice 0 (Trx Value amount (CToken token RepayBorrowBehalf behalf)))
+
+Macro RepayBorrowEthBehalfWTL user behalf amount loanIndex token
+    From user (Trx GasPrice 0 (Trx Value amount (CTokenWithTermLoans token RepayBorrowBehalf behalf loanIndex)))
 
 Macro Liquidate liquidator _ borrower amount token _ collateral
     From liquidator (CToken token Liquidate borrower collateral amount)
 
+Macro LiquidateWTL liquidator _ borrower amount loanIndex token _ collateral
+    From liquidator (CTokenWithTermLoans token Liquidate borrower collateral amount loanIndex)
+
 Macro LiquidateEthColl liquidator _ borrower amount token _ collateral
     From liquidator (Trx GasPrice 0 (CToken token Liquidate borrower collateral amount))
 
+Macro LiquidateEthCollWTL liquidator _ borrower amount loanIndex token _ collateral
+    From liquidator (Trx GasPrice 0 (CTokenWithTermLoans token Liquidate borrower collateral amount loanIndex))
+
 Macro LiquidateEthBorrow liquidator _ borrower amount token _ collateral
     From liquidator (Trx GasPrice 0 (Trx Value amount (CToken token Liquidate borrower collateral)))
+
+Macro LiquidateEthBorrowWTL liquidator _ borrower amount loanIndex token _ collateral
+    From liquidator (Trx GasPrice 0 (Trx Value amount (CTokenWithTermLoans token Liquidate borrower collateral loanIndex)))
 
 Macro Seize amount token caller liquidator borrower
     From caller (CToken token Seize liquidator borrower amount)
@@ -177,14 +207,24 @@ Macro Support cToken collateralFactor=0.5
     Comptroller SupportMarket cToken
     Comptroller SetCollateralFactor cToken collateralFactor
 
+Macro SupportWTL cToken collateralFactor=0.5
+    Comptroller SupportMarket cToken
+    Comptroller SetCollateralFactor cToken collateralFactor
+
 Macro SetCollateralFactor cToken collateralFactor=0.5
     Comptroller SetCollateralFactor cToken collateralFactor
 
 Macro AddReserves amount token user=Root
     From user (CToken token AddReserves amount)
 
+Macro AddReservesWTL amount token user=Root
+    From user (CTokenWithTermLoans token AddReserves amount)
+
 Macro ReduceReserves amount token
     CToken token ReduceReserves amount
+
+Macro ReduceReservesWTL amount token
+    CTokenWithTermLoans token ReduceReserves amount
 
 Macro FastForward n blocks
     Comptroller FastForward n blocks
@@ -201,15 +241,28 @@ Macro Transfer from to amount token
 Macro Cash cToken
     Read Erc20 (CToken cToken Underlying) TokenBalance cToken
 
+Macro CashWTL cToken
+    Read Erc20 (CTokenWithTermLoans cToken Underlying) TokenBalance cToken
+
 Macro QuickMint amount cToken from=Me
     Give from amount (CToken cToken Underlying)
     Allow from cToken
     From from (CToken cToken Mint amount)
 
+Macro QuickMintWTL amount cToken from=Me
+    Give from amount (CTokenWithTermLoans cToken Underlying)
+    Allow from cToken
+    From from (CTokenWithTermLoans cToken Mint amount)
+
 Macro QuickBorrow amount cToken ...collateral
     From Me (Comptroller EnterMarkets collateral)
     From Me (Comptroller EnterMarkets (cToken))
-    From Me (CToken cToken Borrow amount)
+    From Me (CToken cToken BorrowWTL amount)
+
+Macro QuickBorrowWTL amount cToken ...collateral
+    From Me (Comptroller EnterMarkets collateral)
+    From Me (Comptroller EnterMarkets (cToken))
+    From Me (CTokenWithTermLoans cToken BorrowWTL amount)
 
 -- Macro for performing a borrow with the sole
 -- purpose of adding interest to the erc20 market

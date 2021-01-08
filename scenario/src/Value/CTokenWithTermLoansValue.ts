@@ -17,13 +17,13 @@ import {
   Value,
   StringV
 } from '../Value';
-import { getWorldContractByAddress, getCTokenAddress } from '../ContractLookup';
+import { getWorldContractByAddress, getCTokenWithTermLoansAddress } from '../ContractLookup';
 
 export async function getCTokenWithTermLoansV(world: World, event: Event): Promise<CTokenWithTermLoans> {
   const address = await mapValue<AddressV>(
     world,
     event,
-    (str) => new AddressV(getCTokenAddress(world, str)),
+    (str) => new AddressV(getCTokenWithTermLoansAddress(world, str)),
     getCoreValue,
     AddressV
   );
@@ -35,7 +35,7 @@ export async function getCErc20WithTermLoansDelegatorV(world: World, event: Even
   const address = await mapValue<AddressV>(
     world,
     event,
-    (str) => new AddressV(getCTokenAddress(world, str)),
+    (str) => new AddressV(getCTokenWithTermLoansAddress(world, str)),
     getCoreValue,
     AddressV
   );

@@ -16,7 +16,6 @@ import "./InterestRateModel.sol";
  // TODO: max number of loans per account
 contract CTokenWithTermLoans is CTokenWithTermLoansInterface, Exponential, TokenErrorReporter {
 
-    uint256 MAX_INT = 2**256 - 1; // ADDED
 
     /**
      * @notice Initialize the money market
@@ -631,6 +630,7 @@ contract CTokenWithTermLoans is CTokenWithTermLoansInterface, Exponential, Token
          *  in case of a fee. On success, the cToken holds an additional `actualMintAmount`
          *  of cash.
          */
+
         vars.actualMintAmount = doTransferIn(minter, mintAmount);
 
         /*
@@ -815,9 +815,10 @@ contract CTokenWithTermLoans is CTokenWithTermLoansInterface, Exponential, Token
     /**
       * @notice Sender borrows assets from the protocol to their own address
       * @param borrowAmount The amount of the underlying asset to borrow
+      * @param deadline Deadline of loan
       * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
       */
-    function borrowInternal(uint borrowAmount) internal nonReentrant returns (uint) {
+    function borrowInternal(uint borrowAmount, uint deadline) internal nonReentrant returns (uint) {
         uint error = accrueInterest();
         if (error != uint(Error.NO_ERROR)) {
             // accrueInterest emits logs on errors, but we still want to log the fact that an attempted borrow failed
@@ -825,7 +826,7 @@ contract CTokenWithTermLoans is CTokenWithTermLoansInterface, Exponential, Token
         }
         // borrowFresh emits borrow-specific logs on errors, so we don't need to
         // TODO: deadline
-        return borrowFresh(msg.sender, borrowAmount, MAX_INT);
+        return borrowFresh(msg.sender, borrowAmount, deadline);
     } // MODIFIED
 
     struct BorrowLocalVars {
@@ -838,6 +839,7 @@ contract CTokenWithTermLoans is CTokenWithTermLoansInterface, Exponential, Token
     /**
       * @notice Users borrow assets from the protocol to their own address
       * @param borrowAmount The amount of the underlying asset to borrow
+      * @param deadline Deadline of loan
       * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
       */
     function borrowFresh(address payable borrower, uint borrowAmount, uint deadline) internal returns (uint) {
@@ -1083,9 +1085,10 @@ contract CTokenWithTermLoans is CTokenWithTermLoansInterface, Exponential, Token
      */
     function liquidateBorrowFresh(address liquidator, address borrower, uint repayAmount, uint loanIndex, CTokenWithTermLoansInterface cTokenCollateral) internal returns (uint, uint) {
         /* Fail if liquidate not allowed */
-        uint allowed = comptroller.liquidateBorrowAllowed(address(this), address(cTokenCollateral), liquidator, borrower, repayAmount, loanIndex);
-        if (allowed != 0) {
-            return (failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.LIQUIDATE_COMPTROLLER_REJECTION, allowed), 0);
+        uint errCode;
+        errCode = comptroller.liquidateBorrowAllowed(address(this), address(cTokenCollateral), liquidator, borrower, repayAmount, loanIndex);
+        if (errCode != 0) {
+            return (failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.LIQUIDATE_COMPTROLLER_REJECTION, errCode), 0);
         }
 
         /* Verify market's block number equals current block number */
@@ -1115,9 +1118,10 @@ contract CTokenWithTermLoans is CTokenWithTermLoansInterface, Exponential, Token
 
 
         /* Fail if repayBorrow fails */
-        (uint repayBorrowError, uint actualRepayAmount) = repayBorrowFresh(liquidator, borrower, repayAmount, loanIndex);
-        if (repayBorrowError != uint(Error.NO_ERROR)) {
-            return (fail(Error(repayBorrowError), FailureInfo.LIQUIDATE_REPAY_BORROW_FRESH_FAILED), 0);
+        uint actualRepayAmount;
+        (errCode, actualRepayAmount) = repayBorrowFresh(liquidator, borrower, repayAmount, loanIndex);
+        if (errCode != uint(Error.NO_ERROR)) {
+            return (fail(Error(errCode), FailureInfo.LIQUIDATE_REPAY_BORROW_FRESH_FAILED), 0);
         }
 
         /////////////////////////
@@ -1125,22 +1129,22 @@ contract CTokenWithTermLoans is CTokenWithTermLoansInterface, Exponential, Token
         // (No safe failures beyond this point)
 
         /* We calculate the number of collateral tokens that will be seized */
-        (uint amountSeizeError, uint seizeTokens) = comptroller.liquidateCalculateSeizeTokens(address(this), address(cTokenCollateral), actualRepayAmount);
-        require(amountSeizeError == uint(Error.NO_ERROR), "LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED");
+        uint seizeTokens;
+        (errCode, seizeTokens) = comptroller.liquidateCalculateSeizeTokens(address(this), address(cTokenCollateral), actualRepayAmount);
+        require(errCode == uint(Error.NO_ERROR), "LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED");
 
         /* Revert if borrower collateral token balance < seizeTokens */
         require(cTokenCollateral.balanceOf(borrower) >= seizeTokens, "LIQUIDATE_SEIZE_TOO_MUCH");
 
         // If this is also the collateral, run seizeInternal to avoid re-entrancy, otherwise make an external call
-        uint seizeError;
         if (address(cTokenCollateral) == address(this)) {
-            seizeError = seizeInternal(address(this), liquidator, borrower, seizeTokens);
+            errCode = seizeInternal(address(this), liquidator, borrower, seizeTokens);
         } else {
-            seizeError = cTokenCollateral.seize(liquidator, borrower, seizeTokens);
+            errCode = cTokenCollateral.seize(liquidator, borrower, seizeTokens);
         }
 
         /* Revert if seize tokens fails (since we cannot be sure of side effects) */
-        require(seizeError == uint(Error.NO_ERROR), "token seizure failed");
+        require(errCode == uint(Error.NO_ERROR), "token seizure failed");
 
         /* We emit a LiquidateBorrow event */
         emit LiquidateBorrow(liquidator, borrower, actualRepayAmount, loanIndex, address(cTokenCollateral), seizeTokens);

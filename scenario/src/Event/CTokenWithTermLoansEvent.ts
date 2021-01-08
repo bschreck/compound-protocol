@@ -107,6 +107,7 @@ async function redeemUnderlying(world: World, from: string, cToken: CTokenWithTe
 }
 
 async function borrow(world: World, from: string, cToken: CTokenWithTermLoans, amount: NumberV, deadline: NumberV): Promise<World> {
+  console.log(cToken._jsonInterface);
   let invokation = await invoke(world, cToken.methods.borrow(amount.encode(), deadline.val as number), from, CTokenErrorReporter);
 
   world = addAction(

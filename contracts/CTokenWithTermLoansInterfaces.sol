@@ -4,7 +4,7 @@ import "./ComptrollerWithTermLoansInterface.sol";
 import "./CTokenInterfaces.sol";
 import "./InterestRateModel.sol";
 
-contract CTokenWIthTermLoansStorage {
+contract CTokenWithTermLoansStorage {
     /**
      * @dev Guard variable for re-entrancy checks
      */
@@ -120,7 +120,7 @@ contract CTokenWIthTermLoansStorage {
     mapping(address => uint[]) internal accountActiveLoanIndices; // ADDED
 }
 
-contract CTokenWithTermLoansInterface is CTokenWIthTermLoansStorage {
+contract CTokenWithTermLoansInterface is CTokenWithTermLoansStorage {
     /**
      * @notice Indicator that this is a CToken contract (for inspection)
      */
@@ -221,14 +221,15 @@ contract CTokenWithTermLoansInterface is CTokenWIthTermLoansStorage {
     function allowance(address owner, address spender) external view returns (uint);
     function balanceOf(address owner) external view returns (uint);
     function balanceOfUnderlying(address owner) external returns (uint);
-    function getAccountSnapshot(address account) external view returns (uint, uint, uint, uint); // MODIFIED
+    function getAccountSnapshot(address account) external view returns (uint, uint, uint, uint);
     function getAccountSnapshotByLoan(address account, uint loanIndex) external view returns (uint, uint, uint, uint); // ADDED
     function getLoanIndices(address account) external view returns (uint[] memory); // ADDED
     function borrowRatePerBlock() external view returns (uint);
     function supplyRatePerBlock() external view returns (uint);
     function totalBorrowsCurrent() external returns (uint);
     function borrowBalanceCurrent(address account) external returns (uint);
-    function borrowBalanceStored(address account) public view returns (uint);
+    function borrowBalanceStored(address account, uint loanIndex) public view returns (uint); // MODIFIED
+    function allBorrowBalanceStored(address account) public view returns (uint); // ADDED
     function exchangeRateCurrent() public returns (uint);
     function exchangeRateStored() public view returns (uint);
     function getCash() external view returns (uint);
@@ -240,7 +241,7 @@ contract CTokenWithTermLoansInterface is CTokenWIthTermLoansStorage {
 
     function _setPendingAdmin(address payable newPendingAdmin) external returns (uint);
     function _acceptAdmin() external returns (uint);
-    function _setComptrollerWTL(ComptrollerWithTermLoansInterface newComptroller) public returns (uint); // MODIFIED
+    function _setComptroller(ComptrollerWithTermLoansInterface newComptroller) public returns (uint); // MODIFIED
     function _setReserveFactor(uint newReserveFactorMantissa) external returns (uint);
     function _reduceReserves(uint reduceAmount) external returns (uint);
     function _setInterestRateModel(InterestRateModel newInterestRateModel) public returns (uint);
@@ -253,7 +254,7 @@ contract CErc20WithTermLoansInterface is CErc20Storage {
     function mint(uint mintAmount) external returns (uint);
     function redeem(uint redeemTokens) external returns (uint);
     function redeemUnderlying(uint redeemAmount) external returns (uint);
-    function borrow(uint borrowAmount) external returns (uint);
+    function borrow(uint borrowAmount, uint deadline) external returns (uint);
     function repayBorrow(uint repayAmount, uint loanIndex) external returns (uint); // MODIFIED
     function repayBorrowBehalf(address borrower, uint repayAmount, uint loanIndex) external returns (uint); // MODIFIED
     function liquidateBorrow(address borrower, uint repayAmount, uint loanIndex, CTokenWithTermLoansInterface cTokenCollateral) external returns (uint); // MODIFIED

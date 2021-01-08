@@ -1315,7 +1315,7 @@ contract ComptrollerG6 is ComptrollerV6Storage, ComptrollerWithTermLoansInterfac
 
         if (borrowerIndex.mantissa > 0) {
             Double memory deltaIndex = sub_(borrowIndex, borrowerIndex);
-            uint borrowerAmount = div_(CTokenWithTermLoans(cToken).borrowBalanceStored(borrower), marketBorrowIndex);
+            uint borrowerAmount = div_(CTokenWithTermLoans(cToken).allBorrowBalanceStored(borrower), marketBorrowIndex);
             uint borrowerDelta = mul_(borrowerAmount, deltaIndex);
             uint borrowerAccrued = add_(compAccrued[borrower], borrowerDelta);
             compAccrued[borrower] = transferComp(borrower, borrowerAccrued, distributeAll ? 0 : compClaimThreshold);

@@ -104,9 +104,9 @@ export function getCTokenAddress(world: World, cTokenArg: string): string {
   return getContractDataString(world, [['cTokens', cTokenArg, 'address']]);
 }
 
-//export function getCTokenWithTermLoansAddress(world: World, cTokenArg: string): string {
-//  return getContractDataString(world, [['cTokensWithTermLoans', cTokenArg, 'address']]);
-//}
+export function getCTokenWithTermLoansAddress(world: World, cTokenArg: string): string {
+  return getContractDataString(world, [['cTokens', cTokenArg, 'address']]);
+}
 
 export function getCTokenDelegateAddress(world: World, cTokenDelegateArg: string): string {
   return getContractDataString(world, [['CTokenDelegate', cTokenDelegateArg, 'address']]);

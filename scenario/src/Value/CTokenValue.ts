@@ -44,6 +44,9 @@ export async function getCTokenWithTermLoansV(world: World, event: Event): Promi
 }
 
 export async function getCTokenOrCTokenWithTermLoansV(world: World, event: Event): Promise<CToken | CTokenWithTermLoans> {
+
+  // TODO: this assumes CTokenWithTermLoans are also in the cTokens list which could get confusing.
+  // we could create a new list, but then would have to have Comptroller logic be a bit more complicated
   const address = await mapValue<AddressV>(
     world,
     event,

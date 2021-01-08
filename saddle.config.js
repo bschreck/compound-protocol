@@ -15,20 +15,22 @@ module.exports = {
   // coverage_ignore: [],                                   // List of files to ignore for coverage
   contracts: process.env['SADDLE_CONTRACTS'] || "{contracts,contracts/**,tests/Contracts}/*.sol",
                                                             // Glob to match contract files
-  trace: true,                                             // Compile with debug artifacts
+  trace: false,                                             // Compile with debug artifacts
   // TODO: Separate contracts for test?
   tests: ['**/tests/{,**/}*Test.js'],                       // Glob to match test files
   networks: {                                               // Define configuration for each network
     development: {
       providers: [
       {env: "PROVIDER"},
-        {ganache: {
-          gasLimit: 0xfffffffff,
-          gasPrice: 20000,
-          defaultBalanceEther: 1000000000,
-          allowUnlimitedContractSize: true,
-          hardfork: 'istanbul'
-        }}
+        {http: "http://localhost:8545/",
+          host: "ganache-cli"},
+        //{ganache: {
+        //  gasLimit: 0xfffffffff,
+        //  gasPrice: 20000,
+        //  defaultBalanceEther: 1000000000,
+        //  allowUnlimitedContractSize: true,
+        //  hardfork: 'istanbul'
+        //}}
       ],
       web3: {                                               // Web3 options for immediate confirmation in development mode
         gas: [
